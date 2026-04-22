@@ -1,0 +1,32 @@
+{
+  "binary_iou": {
+    "stage4_vs_stage5": 1.0,
+    "stage5_vs_final": 1.0,
+    "rw_input_vs_final": 1.0,
+    "stage4_vs_final": 1.0
+  },
+  "class_iou": {
+    "stage4_vs_stage5": {
+      "1": 1.0,
+      "2": 1.0
+    },
+    "stage5_vs_final": {
+      "1": 1.0,
+      "2": 1.0
+    },
+    "rw_input_vs_final": {
+      "1": 1.0,
+      "2": 1.0
+    },
+    "stage4_vs_final": {
+      "1": 1.0,
+      "2": 1.0
+    }
+  },
+  "mean_iou": {
+    "stage4_vs_stage5": 1.0,
+    "stage5_vs_final": 1.0,
+    "rw_input_vs_final": 1.0,
+    "stage4_vs_final": 1.0
+  }
+}

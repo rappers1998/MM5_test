@@ -1,0 +1,16 @@
+{
+  "method_name": "M3_JAY2025_REGISTRATION_FALLBACK",
+  "track": "UV",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 0.19074816660871843,
+  "checkerboard_corner_rmse_px": 0.2213816055966493,
+  "keypoint_transfer_error_px": 45.04388236999512,
+  "ntg": 0.08031349816660299,
+  "mutual_information": 0.22623678594175223,
+  "valid_warp_coverage": 0.9974500064300412,
+  "mean_iou": 0.1781460225318485,
+  "freq_iou": 0.920943470374451,
+  "pixel_accuracy": 0.9510622750883692,
+  "mean_pixel_accuracy": 0.20520511254026955,
+  "boundary_f1": 0.023013416222787113
+}

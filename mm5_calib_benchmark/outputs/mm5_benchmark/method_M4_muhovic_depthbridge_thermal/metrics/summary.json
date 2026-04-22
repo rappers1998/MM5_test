@@ -1,0 +1,17 @@
+{
+  "method_name": "M4_DEPTHBRIDGE_ADAPTED",
+  "track": "THERMAL",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 2.287250734931213,
+  "checkerboard_corner_rmse_px": 2.394632259230419,
+  "keypoint_transfer_error_px": 16.16178477605184,
+  "overall_region_error_px": 4.375495671951891,
+  "ntg": 0.20019991718365768,
+  "mutual_information": 0.289861601405237,
+  "valid_warp_coverage": 0.9360504150390625,
+  "mean_iou": 0.4302194085367335,
+  "freq_iou": 0.946689334443929,
+  "pixel_accuracy": 0.9646436819083326,
+  "mean_pixel_accuracy": 0.7642381119516264,
+  "boundary_f1": 0.23892275296849372
+}

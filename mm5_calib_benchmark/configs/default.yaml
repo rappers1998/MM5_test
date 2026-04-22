@@ -1,0 +1,8 @@
+runtime:
+  seed: 42
+  plane_depth_mm: 700.0
+  max_test_scenes: 30
+outputs:
+  root: mm5_calib_benchmark/outputs/mm5_benchmark
+  index_csv: mm5_calib_benchmark/outputs/mm5_benchmark/mm5_index.csv
+  splits_dir: mm5_calib_benchmark/outputs/mm5_benchmark/splits

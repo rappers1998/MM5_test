@@ -1,0 +1,40 @@
+{
+  "summary": {
+    "pixel_accuracy": 0.9980712890625,
+    "mean_iou": 0.991409943936322,
+    "binary_iou_foreground": 0.8771508603441377,
+    "num_valid_pixels": 327680,
+    "foreground_intersection_pixels": 4384,
+    "foreground_union_pixels": 4998,
+    "pred_only_foreground_pixels": 325,
+    "gt_only_foreground_pixels": 289,
+    "class_mismatch_inside_fg_intersection_pixels": 18,
+    "exact_match_pixels_on_fg_union": 4366,
+    "classes": [
+      1,
+      2
+    ],
+    "ignore_labels": [],
+    "foreground_only": false,
+    "include_background": false
+  },
+  "per_class": {
+    "1": {
+      "iou": 0.9895287958115183,
+      "tp": 1701.0,
+      "fp": 18.0,
+      "fn": 0.0,
+      "support": 1701.0
+    },
+    "2": {
+      "iou": 0.9932910920611256,
+      "tp": 2665.0,
+      "fp": 0.0,
+      "fn": 18.0,
+      "support": 2683.0
+    }
+  },
+  "label_format": {
+    "mode": "single_channel_id"
+  }
+}

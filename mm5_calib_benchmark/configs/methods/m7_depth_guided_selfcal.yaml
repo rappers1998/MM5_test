@@ -1,0 +1,10 @@
+method_name: M7_DEPTH_GUIDED_SELF_CAL_THERMAL
+train_refine_scene_count: 48
+pose_delta_deg: 2.0
+pose_delta_mm: 20.0
+splat_radius: 1
+hole_fill_max_dist_px: 8
+support_dilate_ksize: 9
+band_width_px: 7
+quality_gate_min_projected_ratio: 0.90
+quality_gate_min_score_gain: 0.01

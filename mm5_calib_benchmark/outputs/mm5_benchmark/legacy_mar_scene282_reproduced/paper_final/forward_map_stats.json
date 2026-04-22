@@ -1,0 +1,31 @@
+{
+  "shape": [
+    720,
+    1280,
+    2
+  ],
+  "finite_count": 7338,
+  "finite_ratio": 0.007962239583333324,
+  "nan_count_total": 1828524,
+  "inf_count_total": 0,
+  "in_target_count": 7338,
+  "in_target_ratio_all": 0.007962239583333324,
+  "in_target_ratio_finite": 0.9999999999998637,
+  "in_target_bbox_rounded": [
+    9,
+    292,
+    532,
+    452
+  ],
+  "u_range": [
+    8.847570419311523,
+    532.4655151367188
+  ],
+  "v_range": [
+    292.0101623535156,
+    452.2797546386719
+  ],
+  "src_fg_count": 8073,
+  "src_fg_finite_count": 7338,
+  "src_fg_finite_ratio": 0.9089557785208833
+}

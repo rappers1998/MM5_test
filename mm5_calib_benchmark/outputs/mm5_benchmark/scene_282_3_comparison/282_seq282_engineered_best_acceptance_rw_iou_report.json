@@ -1,0 +1,32 @@
+{
+  "binary_iou": {
+    "stage4_vs_stage5": 1.0,
+    "stage5_vs_final": 0.9985156912637828,
+    "rw_input_vs_final": 1.0,
+    "stage4_vs_final": 0.9985156912637828
+  },
+  "class_iou": {
+    "stage4_vs_stage5": {
+      "1": 1.0,
+      "2": 1.0
+    },
+    "stage5_vs_final": {
+      "1": 0.9972160356347439,
+      "2": 0.9993150684931507
+    },
+    "rw_input_vs_final": {
+      "1": 1.0,
+      "2": 1.0
+    },
+    "stage4_vs_final": {
+      "1": 0.9972160356347439,
+      "2": 0.9993150684931507
+    }
+  },
+  "mean_iou": {
+    "stage4_vs_stage5": 1.0,
+    "stage5_vs_final": 0.9982655520639473,
+    "rw_input_vs_final": 1.0,
+    "stage4_vs_final": 0.9982655520639473
+  }
+}

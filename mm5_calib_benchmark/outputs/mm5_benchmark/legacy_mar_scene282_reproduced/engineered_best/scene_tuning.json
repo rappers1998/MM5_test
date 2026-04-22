@@ -1,0 +1,39 @@
+{
+  "scene_id": 282,
+  "modality_name": "thermal",
+  "fov_response_power": 0.0,
+  "fov_scale_min": 0.96,
+  "fov_scale_max": 1.04,
+  "use_median_depth": false,
+  "note": "scene 282 tuned separately for engineered_best using raw thermal GT and aligned ANNO_CLASS/1 foreground overlap",
+  "stage4_raw": {
+    "rotT": 0.0,
+    "shift_x": -11.853354427199985,
+    "shift_y": 11.864442528160012,
+    "pTransT": [
+      0.921611696,
+      0.920009731,
+      -0.0294425162,
+      -0.000670070337,
+      0.0,
+      0.0
+    ]
+  },
+  "aligned_final": {
+    "rotT": 0.0,
+    "shift_x": 47.97528920000001,
+    "shift_y": 40.73169680000002,
+    "pTransT": [
+      1.22063161,
+      1.30412697,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "out_hw": [
+      480,
+      640
+    ]
+  }
+}

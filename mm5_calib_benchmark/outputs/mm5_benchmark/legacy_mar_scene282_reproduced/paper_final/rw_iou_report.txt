@@ -1,0 +1,8 @@
+binary_stage4_vs_stage5=1.000000
+binary_stage5_vs_final=1.000000
+binary_rw_input_vs_final=1.000000
+binary_stage4_vs_final=1.000000
+mean_stage4_vs_stage5=1.000000
+mean_stage5_vs_final=1.000000
+mean_rw_input_vs_final=1.000000
+mean_stage4_vs_final=1.000000

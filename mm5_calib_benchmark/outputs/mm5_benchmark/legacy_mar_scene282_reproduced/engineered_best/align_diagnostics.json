@@ -1,0 +1,162 @@
+{
+  "manual_gt_assumed": false,
+  "stage_stats": {
+    "rect_init": {
+      "area": 44644,
+      "bbox": [
+        8,
+        291,
+        534,
+        454
+      ],
+      "centroid": [
+        269.7998387241287,
+        372.8645506675029
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    },
+    "rect_no_hole": {
+      "area": 40739,
+      "bbox": [
+        8,
+        291,
+        534,
+        454
+      ],
+      "centroid": [
+        268.67721348093966,
+        373.4580132060188
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    },
+    "raw_after_redistort": {
+      "area": 4716,
+      "bbox": [
+        183,
+        246,
+        351,
+        307
+      ],
+      "centroid": [
+        268.16942324003395,
+        275.9667090754877
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    },
+    "raw_after_depth_correction": {
+      "area": 4716,
+      "bbox": [
+        183,
+        246,
+        351,
+        307
+      ],
+      "centroid": [
+        268.16942324003395,
+        275.9667090754877
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    },
+    "final_after_rw": {
+      "area": 4709,
+      "bbox": [
+        183,
+        246,
+        351,
+        307
+      ],
+      "centroid": [
+        268.1596942025908,
+        275.9706944149501
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    }
+  },
+  "ratios": {
+    "inverse_map_hole_rate": 0.8756744384765629,
+    "hole_fill_ratio_raw": 0.0012329101562499963,
+    "real_projected_ratio_raw": 0.01315917968749996,
+    "hole_fill_ratio_on_redistort": 0.0856658184902278,
+    "real_projected_ratio_on_redistort": 0.91433418150956,
+    "rw_low_conf_ratio_raw": 0.004748535156249986,
+    "redistort_area_ratio": 0.10563569572618706,
+    "depth_area_ratio": 0.9999999999997878,
+    "rw_area_ratio": 0.9985156912635711
+  },
+  "transitions": {
+    "redistort_to_depth": {
+      "area_ratio": 0.9999999999997878,
+      "centroid_shift_px": 0.0,
+      "centroid_delta": [
+        0.0,
+        0.0
+      ],
+      "binary_iou": 1.0,
+      "mean_iou": 1.0,
+      "components_src": 3,
+      "components_dst": 3,
+      "component_delta": 0,
+      "component_increase": false
+    },
+    "depth_to_final": {
+      "area_ratio": 0.9985156912635711,
+      "centroid_shift_px": 0.01051366254931809,
+      "centroid_delta": [
+        -0.0097290374431509,
+        0.003985339462417414
+      ],
+      "binary_iou": 0.9985156912637828,
+      "mean_iou": 0.9982655520639473,
+      "components_src": 3,
+      "components_dst": 3,
+      "component_delta": 0,
+      "component_increase": false
+    },
+    "redistort_to_final": {
+      "area_ratio": 0.9985156912635711,
+      "centroid_shift_px": 0.01051366254931809,
+      "centroid_delta": [
+        -0.0097290374431509,
+        0.003985339462417414
+      ],
+      "binary_iou": 0.9985156912637828,
+      "mean_iou": 0.9982655520639473,
+      "components_src": 3,
+      "components_dst": 3,
+      "component_delta": 0,
+      "component_increase": false
+    }
+  },
+  "no_gt_review": {
+    "geometry_baseline_ok": true,
+    "depth_conservative_ok": true,
+    "rw_conservative_ok": true,
+    "final_fragmented_vs_depth": false,
+    "depth_guard_reasons": [],
+    "rw_guard_reasons": []
+  },
+  "rect_raw_roundtrip_error": {
+    "mean_px": 0.004216775763779879,
+    "max_px": 0.008053518831729889
+  }
+}

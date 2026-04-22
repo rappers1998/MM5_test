@@ -1,0 +1,162 @@
+{
+  "manual_gt_assumed": false,
+  "stage_stats": {
+    "rect_init": {
+      "area": 41673,
+      "bbox": [
+        7,
+        290,
+        534,
+        454
+      ],
+      "centroid": [
+        268.5830873707196,
+        373.4715283276942
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    },
+    "rect_no_hole": {
+      "area": 7330,
+      "bbox": [
+        9,
+        292,
+        532,
+        452
+      ],
+      "centroid": [
+        271.1634379263302,
+        373.44897680763984
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    },
+    "raw_after_redistort": {
+      "area": 4773,
+      "bbox": [
+        171,
+        246,
+        353,
+        308
+      ],
+      "centroid": [
+        260.2748795306935,
+        277.37544521265454
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    },
+    "raw_after_depth_correction": {
+      "area": 4773,
+      "bbox": [
+        171,
+        246,
+        353,
+        308
+      ],
+      "centroid": [
+        260.2748795306935,
+        277.37544521265454
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    },
+    "final_after_rw": {
+      "area": 4773,
+      "bbox": [
+        171,
+        246,
+        353,
+        308
+      ],
+      "centroid": [
+        260.2748795306935,
+        277.37544521265454
+      ],
+      "class_count": 2,
+      "classes": [
+        1,
+        2
+      ]
+    }
+  },
+  "ratios": {
+    "inverse_map_hole_rate": 0.9776306152343751,
+    "hole_fill_ratio_raw": 0.012207031249999964,
+    "real_projected_ratio_raw": 0.002359008789062493,
+    "hole_fill_ratio_on_redistort": 0.838047349675081,
+    "real_projected_ratio_on_redistort": 0.1619526503247094,
+    "rw_low_conf_ratio_raw": 0.012207031249999964,
+    "redistort_area_ratio": 0.11453459074220444,
+    "depth_area_ratio": 0.9999999999997904,
+    "rw_area_ratio": 0.9999999999997904
+  },
+  "transitions": {
+    "redistort_to_depth": {
+      "area_ratio": 0.9999999999997904,
+      "centroid_shift_px": 0.0,
+      "centroid_delta": [
+        0.0,
+        0.0
+      ],
+      "binary_iou": 1.0,
+      "mean_iou": 1.0,
+      "components_src": 4,
+      "components_dst": 4,
+      "component_delta": 0,
+      "component_increase": false
+    },
+    "depth_to_final": {
+      "area_ratio": 0.9999999999997904,
+      "centroid_shift_px": 0.0,
+      "centroid_delta": [
+        0.0,
+        0.0
+      ],
+      "binary_iou": 1.0,
+      "mean_iou": 1.0,
+      "components_src": 4,
+      "components_dst": 4,
+      "component_delta": 0,
+      "component_increase": false
+    },
+    "redistort_to_final": {
+      "area_ratio": 0.9999999999997904,
+      "centroid_shift_px": 0.0,
+      "centroid_delta": [
+        0.0,
+        0.0
+      ],
+      "binary_iou": 1.0,
+      "mean_iou": 1.0,
+      "components_src": 4,
+      "components_dst": 4,
+      "component_delta": 0,
+      "component_increase": false
+    }
+  },
+  "no_gt_review": {
+    "geometry_baseline_ok": false,
+    "depth_conservative_ok": true,
+    "rw_conservative_ok": true,
+    "final_fragmented_vs_depth": false,
+    "depth_guard_reasons": [],
+    "rw_guard_reasons": []
+  },
+  "rect_raw_roundtrip_error": {
+    "mean_px": 0.004216775763779879,
+    "max_px": 0.008053518831729889
+  }
+}

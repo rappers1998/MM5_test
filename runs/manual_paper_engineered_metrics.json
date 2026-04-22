@@ -1,0 +1,91 @@
+{
+  "manual": {
+    "area": 4529,
+    "components": 3,
+    "area_ratio": 0.0138214111328125,
+    "bbox": [
+      180,
+      247,
+      352,
+      305
+    ],
+    "centroid": [
+      269.7083241333628,
+      275.01391035548687
+    ]
+  },
+  "paper_final": {
+    "mask_stats": {
+      "area": 5854,
+      "components": 5,
+      "area_ratio": 0.017864990234375,
+      "bbox": [
+        169,
+        233,
+        367,
+        303
+      ],
+      "centroid": [
+        264.6286299965835,
+        267.8261018107277
+      ]
+    },
+    "vs_manual": {
+      "pixel_accuracy_total": 0.9875152587890625,
+      "foreground_iou": 0.43471051540693656,
+      "foreground_precision": 0.5374103177314656,
+      "foreground_recall": 0.6946345771693531,
+      "foreground_dice": 0.6059905614947511,
+      "pred_area": 5854,
+      "gt_area": 4529,
+      "intersection": 3146,
+      "union": 7237,
+      "pred_only": 2708,
+      "gt_only": 1383
+    },
+    "pipeline": {
+      "geometry_baseline_ok": false,
+      "real_projected_ratio_on_redistort": 0.15898578036659944,
+      "hole_fill_ratio_on_redistort": 0.8410142196332292,
+      "depth_area_ratio": 1.0029124550280961,
+      "rw_area_ratio": 0.9999999999998291
+    }
+  },
+  "engineered_best": {
+    "mask_stats": {
+      "area": 5392,
+      "components": 4,
+      "area_ratio": 0.016455078125,
+      "bbox": [
+        184,
+        233,
+        366,
+        299
+      ],
+      "centroid": [
+        275.27206973293767,
+        265.0841988130564
+      ]
+    },
+    "vs_manual": {
+      "pixel_accuracy_total": 0.9878692626953125,
+      "foreground_iou": 0.4278929188255613,
+      "foreground_precision": 0.5513724035608308,
+      "foreground_recall": 0.656436299403842,
+      "foreground_dice": 0.5993347444814031,
+      "pred_area": 5392,
+      "gt_area": 4529,
+      "intersection": 2973,
+      "union": 6948,
+      "pred_only": 2419,
+      "gt_only": 1556
+    },
+    "pipeline": {
+      "geometry_baseline_ok": true,
+      "real_projected_ratio_on_redistort": 0.6793935991015011,
+      "hole_fill_ratio_on_redistort": 0.32060640089831166,
+      "depth_area_ratio": 1.0108553247237486,
+      "rw_area_ratio": 0.9983336419179784
+    }
+  }
+}
