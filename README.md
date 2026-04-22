@@ -67,7 +67,7 @@ MAR_bianyuan/
 5. `mm5_calib_benchmark/scripts/generate_algorithm_summary_doc.py`
    基于现有输出结果生成 Word 总结文档。
 
-主流程代码在 [mm5_calib_benchmark/pipeline.py](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/pipeline.py:1)，配置加载逻辑在 [mm5_calib_benchmark/config.py](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/config.py:1)。
+主流程代码在 [mm5_calib_benchmark/pipeline.py](mm5_calib_benchmark/pipeline.py)，配置加载逻辑在 [mm5_calib_benchmark/config.py](mm5_calib_benchmark/config.py)。
 
 ### 5. 当前已经纳入 benchmark 的方法
 
@@ -90,7 +90,7 @@ MAR_bianyuan/
 8. `M7 Depth Guided Self Calibration`
    当前仓库里最完整、也最偏作者方案的一条路线，结合全局姿态优化、深度引导和边界细化。
 
-从现有 `scene_282_3_metric_explanation.md` 的结果摘要看，当前 test 集上 `M7` 是最强方法之一，`M5`、`M4`、`M6` 处于中间梯队。
+从现有 `scene_282_3_metric_explanation.md` 的结果摘要看，按 `normalized_overall_region_error` 排名时 `M7` 当前最低，但它伴随非常低的 `valid_warp_coverage`；如果按“误差、覆盖率和语义质量一起看”的更稳健标准，`M5`、`M4`、`M6` 仍然是当前更均衡的第一梯队。
 
 ### 6. 输入数据是怎样组织的
 
@@ -98,7 +98,7 @@ MAR_bianyuan/
 
 当前索引文件位于：
 
-- [mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv:1)
+- [mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv](mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv)
 
 从这个 CSV 的表头可以看出，benchmark 会使用这些信息：
 
@@ -174,7 +174,7 @@ Python 版本建议与当前环境保持一致，当前仓库使用的是 `.venv
 
 主输出目录是：
 
-- [mm5_calib_benchmark/outputs/mm5_benchmark](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/outputs/mm5_benchmark:1)
+- [mm5_calib_benchmark/outputs/mm5_benchmark](mm5_calib_benchmark/outputs/mm5_benchmark)
 
 其中比较重要的子目录有：
 
@@ -193,11 +193,11 @@ Python 版本建议与当前环境保持一致，当前仓库使用的是 `.venv
 如果你是第一次看这个项目，建议按这个顺序读：
 
 1. 先看根目录 `README`
-2. 再看 [mar_scholar_compare/README.md](/e:/aa_read_yan/aMAR/MAR_bianyuan/mar_scholar_compare/README.md:1)
+2. 再看 [mar_scholar_compare/README.md](mar_scholar_compare/README.md)
 3. 再看 `mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/`
 4. 重点看下面两个说明文件：
-   [scene_282_3_metric_explanation.md](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/scene_282_3_metric_explanation.md:1)
-   [scene_282_3_mar_history_note.md](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/scene_282_3_mar_history_note.md:1)
+   [scene_282_3_metric_explanation.md](mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/scene_282_3_metric_explanation.md)
+   [scene_282_3_mar_history_note.md](mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/scene_282_3_mar_history_note.md)
 
 几个关键指标的直观含义：
 
@@ -240,13 +240,297 @@ Python 版本建议与当前环境保持一致，当前仓库使用的是 `.venv
 
 1. 看这份 `README`
 2. 理解 `mm5_calib_benchmark/` 是主代码，`runs/` 更像实验记录，`mar_scholar_compare/` 更像分析展示
-3. 先阅读 [mm5_calib_benchmark/pipeline.py](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/pipeline.py:1)，了解总流程
+3. 先阅读 [mm5_calib_benchmark/pipeline.py](mm5_calib_benchmark/pipeline.py)，了解总流程
 4. 再看 `methods/` 下每个 `run.py`
 5. 最后根据自己机器上的数据路径，决定是“只复查现有结果”，还是“重新跑 benchmark”
+
+### 14. Scene 282 核心对比图怎么读
+
+说明：
+
+1. 当前图内标题统一使用英文，不是因为仓库只支持英文，而是因为 OpenCV 默认绘图字体对中文支持不稳定，直接画中文会出现 `???`。
+2. 详细中文解释以 `README` 和 `mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/` 下的说明文件为准。
+3. 当前主热成像对比图聚焦 `M1 / M2 / M4 / M5 / M6 / M7` 六个 thermal 方法。
+4. `M0` 仍然保留在 benchmark 的 per-method 输出目录中，`M3` 是 UV-only 方法，因此不出现在主 thermal 排序图里。
+
+| 产物 | 显示效果 | 建议重点看 | 重要对比参数 |
+| --- | --- | --- | --- |
+| `scene_282_3_all_methods_comparison.png` | 第一行给出 RGB 源图、thermal 目标图、thermal GT；下面每个方法一行，分别有 prediction、contours、error 三张子图 | `prediction` 看整体区域是否压到正确目标上，`contours` 看边界是否贴边，`error` 看错误来自漏检、误检还是类别混淆 | `mean_iou`、`boundary_f1`、`pixel_accuracy`、`valid_warp_coverage`、`overall_region_error_px` |
+| `scene_282_3_thermal_method_ranking_bar.png` | 用 test 集汇总结果给六个 thermal 方法排总榜，并把多个指标放在同一顺序下对比 | 先看 `normalized_overall_region_error` 和 `overall_region_error_px` 判断整体校准精度，再看 `mean_iou` / `pixel_accuracy` 判断语义质量 | `normalized_overall_region_error`、`overall_region_error_px`、`mean_iou`、`pixel_accuracy`、`keypoint_transfer_error_px` |
+| `scene_282_3_thermal_per_scene_normalized_error.png` | 每一行对应一张 test 图片、每一列对应一个 thermal 方法，单元格里直接列出该图的归一化整体区域误差 | 看某个方法是不是只靠少数样本拉高平均分，也看哪些图片是真正难例 | `normalized_overall_region_error`、`best_method`、`scene wins` |
+| `scene_282_3_mar_history_panel.png` | 并排展示历史 MAR 工程版 / 论文版的 raw 与 aligned 结果，并附带几何诊断信息 | 看历史 MAR 在不同 GT 定义下的表现差异，以及几何假设是否成立 | `pixel_accuracy`、`mean_iou`、`binary_iou_foreground`、`geometry_baseline_ok`、`real_projected_ratio_on_redistort` |
+| `scene_282_3_metric_explanation.md` | 指标专门说明文件 | 当你看到 `pixel_accuracy` 很高但图像效果一般时，先回来看这里 | `pixel_accuracy`、`mean_iou`、`boundary_f1`、`overall_region_error_px`、`normalized_overall_region_error` |
+| `scene_282_3_figure_guide.md` | 图像阅读说明索引 | 当你不确定“某张图是看效果还是看参数”时，先看这份导读 | 各图对应的重点指标与使用场景 |
+
+主对比图中的误差图颜色说明如下：
+
+1. 绿色：预测正确
+2. 蓝色：误检前景（GT 是背景）
+3. 橙色：漏掉 GT 前景
+4. 紫色：前景类别错分
+5. 黑色：无效投影区域
+
+推荐阅读顺序：
+
+1. 先看 `scene_282_3_all_methods_comparison.png`
+2. 再看 `scene_282_3_thermal_method_ranking_bar.png`
+3. 然后看 `scene_282_3_thermal_per_scene_normalized_error.png`
+4. 最后看 `scene_282_3_mar_history_panel.png` 与各类说明 `.md`
+
+### 15. 参数总览：这些参数分别是什么意思
+
+#### 15.1 评价指标参数
+
+| 参数 | 含义 | 趋势 | 更适合回答什么问题 |
+| --- | --- | --- | --- |
+| `pixel_accuracy` | 所有有效评测像素里，分类完全正确的比例 | 越大越好 | “整体分类看起来对不对” |
+| `mean_iou` | 各类别 `IoU` 的平均值，更关注前景和类别区域是否真的重合 | 越大越好 | “区域有没有真正对齐” |
+| `mean_pixel_accuracy` | 对每个类别单独算像素正确率后再平均 | 越大越好 | “小类是否被大背景掩盖” |
+| `freq_iou` | 频率加权的 IoU | 越大越好 | “按类别出现频率加权后的整体效果” |
+| `boundary_f1` | 预测边界与 GT 边界的一致性 | 越大越好 | “边界有没有贴边、是否有一圈错位” |
+| `keypoint_transfer_error_px` | 边界/关键点层面的像素转移误差 | 越小越好 | “几何误差大概是多少像素” |
+| `overall_region_error_px` | 整个前景区域的双向平均距离误差 | 越小越好 | “整体区域偏了多少像素” |
+| `normalized_overall_region_error` | `overall_region_error_px / image_diagonal_px`，把不同分辨率结果归一化 | 越小越好 | “跨模态、跨分辨率的主对比指标” |
+| `valid_warp_coverage` | 有效投影区域占目标图像的比例 | 越大越好 | “投影是否覆盖得足够完整” |
+| `checkerboard_corner_rmse_px` | 棋盘格角点重投影均方根误差 | 越小越好 | “标定本身是否稳定” |
+| `mutual_information` | 源图与目标图在有效区域的统计相关性 | 越大越好 | “跨模态图像内容是否更加一致” |
+| `ntg` | Normalized Total Gradient，梯度结构一致性分数 | 越大越好 | “边缘/纹理结构是否更对齐” |
+| `num_test_scenes` | test 集纳入统计的场景数量 | 越大越稳 | “这个汇总结果覆盖了多少场景” |
+
+对当前仓库而言，推荐的主指标优先级是：
+
+1. `normalized_overall_region_error`
+2. `overall_region_error_px`
+3. `mean_iou`
+4. `boundary_f1`
+5. `pixel_accuracy`
+
+#### 15.2 通用运行参数
+
+这些参数来自 `mm5_calib_benchmark/configs/default.yaml` 或配置加载逻辑：
+
+| 参数 | 位置 | 含义 |
+| --- | --- | --- |
+| `runtime.seed` | `configs/default.yaml` | 随机采样、训练场景抽样等流程的固定随机种子 |
+| `runtime.plane_depth_mm` | `configs/default.yaml` | 平面单应近似时假设的参考平面深度 |
+| `runtime.max_test_scenes` | `configs/default.yaml` | 跑 benchmark 时最多纳入的 test 场景数 |
+| `outputs.root` | `configs/default.yaml` | benchmark 统一输出根目录 |
+| `outputs.index_csv` | `configs/default.yaml` | MM5 索引 CSV 路径 |
+| `outputs.splits_dir` | `configs/default.yaml` | `train / val / test` 划分输出目录 |
+| `paths.workspace_calibration` | `config.py` 动态注入 | 工作区下 `calibration/` 的绝对路径 |
+
+#### 15.3 通用 `scene_tune` 参数
+
+这些参数由 [mm5_calib_benchmark/methods/alignment.py](mm5_calib_benchmark/methods/alignment.py) 统一解析，多个方法共享：
+
+| 参数 | 含义 |
+| --- | --- |
+| `coarse_radius_px` | 粗搜索阶段允许的平移搜索半径 |
+| `coarse_step_px` | 粗搜索阶段的平移步长 |
+| `fine_radius_px` | 细搜索阶段围绕粗搜索最优点继续搜索的半径 |
+| `fine_step_px` | 细搜索阶段的平移步长 |
+| `coarse_scales` | 粗搜索阶段尝试的缩放系数列表 |
+| `coarse_angles_deg` | 粗搜索阶段尝试的旋转角度列表 |
+| `fine_scale_delta` | 细搜索阶段围绕当前最优尺度做的小范围扰动 |
+| `fine_angle_delta_deg` | 细搜索阶段围绕当前最优角度做的小范围扰动 |
+| `edge_weight` | 轮廓贴边分数在综合打分中的权重 |
+| `mi_weight` | 互信息分数在综合打分中的权重 |
+| `coverage_weight` | 覆盖率变化惩罚的权重 |
+
+说明：
+
+1. 并不是所有方法的 YAML 都显式写出了全部 `scene_tune` 参数。
+2. 如果方法 YAML 没写，代码会回落到 `methods/alignment.py` 里的默认值。
+3. 所以读参数时，要同时看方法 YAML 和 `scene_tune_kwargs(...)` 里的默认配置。
+
+### 16. 每个方法是什么，以及关键参数是什么意思
+
+#### M0 MM5 Official
+
+1. 核心思路：直接使用 MM5 官方 stereo / 标定结果，再做平面单应投影和场景级微调。
+2. 适用定位：作为“官方标定直接拿来用”的基线。
+3. 关键参数：主要是 `scene_tune.*`。它决定在单应投影之后，还允许做多大范围的平移、缩放、旋转细调。
+4. 方法特点：实现简单、基线清楚，但如果官方标定和当前场景存在偏差，通常需要后续 `scene_tune` 才能追上更强方法。
+
+#### M1 Zhang
+
+1. 核心思路：用棋盘格观测做 OpenCV / Zhang 风格 stereo 标定，然后再做平面单应投影和场景微调。
+2. 关键参数：
+   `square_size_mm`：棋盘格单格的物理边长。
+   `scene_tune.*`：控制场景级搜索范围。
+3. 方法特点：比 M0 更偏“自己重建标定”，适合作为“经典棋盘格标定 + 平面对齐”的标准基线。
+4. 风险点：如果棋盘格标定本身不稳，后续 scene tuning 只能补一部分误差。
+
+#### M2 Su2025 XoFTR Fallback
+
+1. 核心思路：先使用保存下来的 M1/官方标定得到基础单应结果，再做跨模态特征匹配和仿射修正，最后再做场景微调。
+2. 关键参数：
+   `feature_refine.use_clahe`：是否先做 CLAHE 增强，帮助跨模态特征稳定。
+   `feature_refine.sift_nfeatures` / `orb_nfeatures`：特征点上限。
+   `feature_refine.ratio_test`：特征匹配的 Lowe ratio 阈值。
+   `feature_refine.max_matches` / `min_matches`：参与仿射估计的匹配数量上下限。
+   `feature_refine.ransac_reproj_threshold` / `max_iters`：RANSAC 仿射估计的鲁棒性参数。
+   `feature_refine.scale_min` / `scale_max` / `max_translation_px`：仿射修正的保护阈值，防止估计出离谱结果。
+   `scene_tune.*`：在特征仿射之后再做一轮稳定化微调。
+3. 方法特点：适合“纹理/边缘仍然能提供一定跨模态匹配信息”的场景。
+4. 风险点：特征点不足或跨模态差异太大时，可能直接回退，不一定总能带来提升。
+
+#### M3 Jay2025 SGM
+
+1. 核心思路：先做基础单应，再用稠密光流把源图向目标图做更局部的非刚性注册。
+2. 当前实现定位：仓库里是一个 registration fallback，主要服务于 UV 方向。
+3. 关键参数：
+   `flow.pyr_scale` / `levels` / `winsize` / `iterations` / `poly_n` / `poly_sigma`：Farneback 光流的标准控制项。
+   `flow.max_flow_px`：对光流位移做上限裁剪，防止局部失控。
+   `scene_tune.*`：在光流修正后再做轻量全局微调。
+4. 方法特点：能处理部分局部形变，但对跨模态纹理一致性比较敏感。
+5. 限制：当前主图不展示它，是因为它主要是 UV-only 方法。
+
+#### M4 Muhovic DepthBridge
+
+1. 核心思路：把深度投影引入到跨模态对齐里，用深度把 RGB 源图上的目标投到目标模态平面，再做 scene tuning。
+2. 关键参数：
+   `scene_tune.*`：最终全局微调范围。
+   当前实现里另外固定使用了 `fill_holes=True`、`fill_distance_px=10.0`、`support_dilate_ksize=11`、`splat_radius=1` 这些内部默认值，它们控制深度投影后的空洞填补和支持区域扩张。
+3. 方法特点：比纯平面单应更适合处理存在深度起伏的前景目标。
+4. 风险点：如果深度图本身稀疏或噪声大，投影覆盖率和边界稳定性都会受影响。
+
+#### M5 EPnP Baseline
+
+1. 核心思路：先用棋盘格标定结果建立基础几何，再通过 EPnP 估计更强的相对位姿，然后把深度投影作为场景对齐主干。
+2. 关键参数：
+   `square_size_mm`：棋盘格物理尺寸。
+   `scene_tune.*`：投影后的全局微调范围。
+   当前实现里固定使用 `fill_distance_px=6.0`、`support_dilate_ksize=7`、`splat_radius=0`，比 M4 更强调几何位姿本身的质量，而不是强行扩张投影。
+3. 方法特点：通常是一个较强、较稳的工程基线。
+4. 风险点：如果 EPnP 位姿估计受棋盘格噪声影响，整体性能会直接波动。
+
+#### M6 MAR Edge Refine
+
+1. 核心思路：以 M4 的深度桥接结果为基础，再叠加 MAR 风格的边界细化。
+2. 当前实现：主要由 [mm5_calib_benchmark/mar_edge_refine.py](mm5_calib_benchmark/mar_edge_refine.py) 负责，内部会做 scene tuning、边界带提取、random walker 细化以及保护性回退。
+3. 关键参数：
+   `scene_tune.*`：基础几何结果的全局微调。
+   当前实现没有单独暴露很多 YAML 级参数，但代码里有关键保护阈值，例如前景面积比、`binary_iou` 下限、连通域数量变化上限等，用来防止“边界细化越修越坏”。
+4. 方法特点：边界通常比单纯的深度投影更干净，更适合强调轮廓质量的场景。
+5. 风险点：如果 target 边缘本身很弱，边界细化可能保守甚至回退。
+
+#### M7 Depth Guided Self Calibration
+
+1. 核心思路：先做全局姿态自校准，再做深度引导投影、场景微调和边界吸附，是当前仓库里最完整的一条 thermal 路线。
+2. 这是 thermal-only 方法。
+3. 关键参数：
+   `train_refine_scene_count`：用于全局姿态自校准打分的训练场景数量。
+   `pose_delta_deg` / `pose_delta_mm`：全局姿态搜索时允许的旋转和平移扰动范围。
+   `splat_radius`：深度点投影时的扩散半径。
+   `hole_fill_max_dist_px`：投影后空洞允许最近邻补洞的最大距离。
+   `support_dilate_ksize`：支持区域膨胀核大小，决定允许补洞的范围。
+   `band_width_px`：边界吸附时边界带宽度。
+   `quality_gate_min_projected_ratio`：投影覆盖率过低时的质量门槛。
+   `quality_gate_min_score_gain`：全局姿态优化后，只有当自监督得分提升超过这个阈值才接受 refined pose。
+   `scene_tune.*`：在深度投影之后做的全局轻量搜索。
+4. 方法特点：当前最像“完整方案”，在整体区域误差和语义质量上通常都比较强。
+5. 风险点：链路长、参数也最多，所以调参和解释成本都高于其他方法。
+
+### 17. 整个流程怎么操作
+
+如果你要从“准备数据”一路走到“看懂结果”，建议按下面流程操作：
+
+#### 17.1 准备数据与标定资源
+
+1. 确保 `index_with_splits.csv` 或 `mm5_index.csv` 能正确指向本机的 MM5 原始数据路径。
+2. 确保 `calibration/` 下存在所需的 stereo 标定文件。
+3. 如果要复现历史 MAR，还要保证当前仓库同级目录存在 `MAR_test/backup_2600.py`。
+
+#### 17.2 生成数据划分
+
+```powershell
+.venv\Scripts\python.exe -m mm5_calib_benchmark.scripts.make_splits
+```
+
+这一步会生成 benchmark 使用的 `train / val / test` 划分结果。
+
+#### 17.3 运行完整 benchmark
+
+```powershell
+.venv\Scripts\python.exe -m mm5_calib_benchmark.scripts.run_all_methods
+```
+
+这一步会做两件事：
+
+1. 运行 `DEFAULT_SUITE` 里的多方法 benchmark
+2. 顺便生成 Scene 282 的核心对比产物
+
+`DEFAULT_SUITE` 当前包含：
+
+1. `M0 thermal`
+2. `M0 uv`
+3. `M1 thermal`
+4. `M1 uv`
+5. `M5 thermal`
+6. `M5 uv`
+7. `M2 thermal`
+8. `M4 thermal`
+9. `M4 uv`
+10. `M3 uv`
+11. `M6 thermal`
+12. `M7 thermal`
+
+#### 17.4 只重生成 Scene 282 对比材料
+
+如果 benchmark 主结果已经在本地存在，而你只想刷新汇总图和说明文件，可以执行：
+
+```powershell
+.venv\Scripts\python.exe -m mm5_calib_benchmark.scripts.make_scene_2823_comparison
+```
+
+这一步会刷新：
+
+1. `scene_282_3_all_methods_comparison.png`
+2. `scene_282_3_thermal_method_ranking_bar.png`
+3. `scene_282_3_metrics.csv`
+4. `scene_282_3_metric_explanation.md`
+5. `scene_282_3_figure_guide.md`
+6. `scene_282_3_thermal_per_scene_normalized_error.csv`
+7. `scene_282_3_thermal_per_scene_normalized_error.png`
+8. `scene_282_3_thermal_per_scene_normalized_error_note.md`
+9. 以及历史 MAR 相关汇总图和说明
+
+#### 17.5 查看 per-method 输出
+
+每个方法各自的输出目录通常包含：
+
+1. `calib/`：标定或最终位姿结果
+2. `metrics/`：per-scene、per-class 和 summary 指标
+3. `masks/`：预测 mask、GT mask、误差图
+4. `viz/`：轮廓图、热力图、阶段图
+5. `warped/`：投影后的图像与 overlay
+
+如果你要解释“为什么某个方法分数高 / 低”，不要只看 `summary.json`，而要把 `viz/`、`masks/` 和 `warped/` 一起看。
+
+#### 17.6 阅读结果的最短路径
+
+最短建议路径如下：
+
+1. 先看这份 `README`
+2. 再看 `scene_282_3_figure_guide.md`
+3. 然后看 `scene_282_3_all_methods_comparison.png`
+4. 再看 `scene_282_3_thermal_method_ranking_bar.png`
+5. 最后用 `scene_282_3_metric_explanation.md` 和 `scene_282_3_thermal_per_scene_normalized_error_note.md` 回头解释各指标
+
+#### 17.7 什么时候该看哪一类指标
+
+1. 如果你想知道“整体区域有没有对齐”，优先看 `normalized_overall_region_error` 和 `overall_region_error_px`
+2. 如果你想知道“语义类别有没有对准”，优先看 `mean_iou`
+3. 如果你想知道“边界是不是贴边”，优先看 `boundary_f1`
+4. 如果你想知道“投影是不是只对上了一小块”，优先看 `valid_warp_coverage`
+5. 如果你想知道“棋盘格标定本身稳不稳”，优先看 `checkerboard_corner_rmse_px`
 
 ---
 
 ## English Version
+
+The Chinese section above contains the most detailed figure guide, parameter glossary, method-by-method explanation, and end-to-end workflow notes for this repository.
 
 ### 1. What this repository is
 
@@ -308,7 +592,7 @@ The most important scripts are:
 5. `mm5_calib_benchmark/scripts/generate_algorithm_summary_doc.py`
    Produces a Word report from benchmark outputs.
 
-The central orchestration logic lives in [mm5_calib_benchmark/pipeline.py](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/pipeline.py:1), and configuration loading lives in [mm5_calib_benchmark/config.py](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/config.py:1).
+The central orchestration logic lives in [mm5_calib_benchmark/pipeline.py](mm5_calib_benchmark/pipeline.py), and configuration loading lives in [mm5_calib_benchmark/config.py](mm5_calib_benchmark/config.py).
 
 ### 5. Implemented methods
 
@@ -331,7 +615,7 @@ The benchmark currently includes eight method families, `M0` through `M7`:
 8. `M7 Depth Guided Self Calibration`
    The most complete "author-style" path in this repository, combining pose refinement, depth guidance, and boundary-aware improvement.
 
-Based on the current benchmark summary, `M7` is one of the strongest methods on the current test subset, with `M5`, `M4`, and `M6` forming the next tier.
+Based on the current benchmark summary, `M7` currently has the lowest `normalized_overall_region_error`, but it does so with very low `valid_warp_coverage`; if you judge by a more balanced combination of error, coverage, and semantic quality, `M5`, `M4`, and `M6` remain the stronger top tier on the current test subset.
 
 ### 6. Input data expectations
 
@@ -339,7 +623,7 @@ This is not a self-contained toy repository. It depends on MM5 raw data, aligned
 
 The active index file is:
 
-- [mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv:1)
+- [mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv](mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv)
 
 From its header, the benchmark expects:
 
@@ -415,7 +699,7 @@ The expected layout is roughly:
 
 The main output root is:
 
-- [mm5_calib_benchmark/outputs/mm5_benchmark](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/outputs/mm5_benchmark:1)
+- [mm5_calib_benchmark/outputs/mm5_benchmark](mm5_calib_benchmark/outputs/mm5_benchmark)
 
 The most important subfolders are:
 
@@ -433,11 +717,11 @@ The most important subfolders are:
 If you are reading this project for the first time, a good order is:
 
 1. Read this `README`
-2. Read [mar_scholar_compare/README.md](/e:/aa_read_yan/aMAR/MAR_bianyuan/mar_scholar_compare/README.md:1)
+2. Read [mar_scholar_compare/README.md](mar_scholar_compare/README.md)
 3. Explore `mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/`
 4. Pay special attention to:
-   [scene_282_3_metric_explanation.md](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/scene_282_3_metric_explanation.md:1)
-   [scene_282_3_mar_history_note.md](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/scene_282_3_mar_history_note.md:1)
+   [scene_282_3_metric_explanation.md](mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/scene_282_3_metric_explanation.md)
+   [scene_282_3_mar_history_note.md](mm5_calib_benchmark/outputs/mm5_benchmark/scene_282_3_comparison/scene_282_3_mar_history_note.md)
 
 The most important metrics are:
 
@@ -480,6 +764,6 @@ If you are taking over this project, the recommended order is:
 
 1. Read this `README`
 2. Understand that `mm5_calib_benchmark/` is the main code, `runs/` is mostly experiment records, and `mar_scholar_compare/` is analysis material
-3. Read [mm5_calib_benchmark/pipeline.py](/e:/aa_read_yan/aMAR/MAR_bianyuan/mm5_calib_benchmark/pipeline.py:1) to understand the global workflow
+3. Read [mm5_calib_benchmark/pipeline.py](mm5_calib_benchmark/pipeline.py) to understand the global workflow
 4. Then inspect each method under `methods/`
 5. Finally decide whether you want to inspect existing outputs only, or actually rerun the benchmark on a machine with valid MM5 data paths
