@@ -1,0 +1,97 @@
+{
+  "method": "teacher_residual_global_flow",
+  "runtime_inputs": [
+    "raw_rgb1_path",
+    "raw_thermal16_path",
+    "calibration_plane_opt_baseline_or_equivalent"
+  ],
+  "teacher_reference_used_for": "offline training and evaluation only",
+  "global_affine_matrix_2x3": [
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0
+    ]
+  ],
+  "global_affine_matrix_3x3": [
+    [
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "global_flow_path": "E:\\aa_read_yan\\aMAR\\MAR_bianyuan\\darklight_mm5\\teacher_residual_method\\teacher_residual_global_flow.npy",
+  "sample_flow_path": "E:\\aa_read_yan\\aMAR\\MAR_bianyuan\\darklight_mm5\\teacher_residual_method\\teacher_residual_sample_flows.npz",
+  "local_flow_sigma": 7.0,
+  "local_flow_max": 32.0,
+  "raw_refine_shift": 2,
+  "max_corner_shift": 60.0,
+  "selected_variant": "global_flow_raw_refined",
+  "selected_sample_ids": [
+    "103_seq385",
+    "104_seq386",
+    "106_seq388"
+  ],
+  "evaluation_summary": {
+    "aligned_id_mean": 104.33333333333333,
+    "aligned_id_min": 103.0,
+    "aligned_id_max": 106.0,
+    "sequence_mean": 386.3333333333333,
+    "sequence_min": 385.0,
+    "sequence_max": 388.0,
+    "target_ncc_mean": 0.3073801000912984,
+    "target_ncc_min": 0.26783910393714905,
+    "target_ncc_max": 0.3821712136268616,
+    "target_mi_mean": 0.5394562346238694,
+    "target_mi_min": 0.4940323870820953,
+    "target_mi_max": 0.5676723745129864,
+    "target_edge_distance_mean": 4.848475058873494,
+    "target_edge_distance_min": 2.9437458515167236,
+    "target_edge_distance_max": 6.890771865844727,
+    "target_valid_ratio_mean": 0.8142679398148148,
+    "target_valid_ratio_min": 0.8125716145833334,
+    "target_valid_ratio_max": 0.8153157552083333,
+    "raw_rgb_ncc_mean": 0.23965182403723398,
+    "raw_rgb_ncc_min": 0.1678028255701065,
+    "raw_rgb_ncc_max": 0.3286876082420349,
+    "raw_rgb_mi_mean": 0.160153809712866,
+    "raw_rgb_mi_min": 0.1537855708832526,
+    "raw_rgb_mi_max": 0.16935190111403658,
+    "raw_rgb_edge_distance_mean": 1.4896984100341797,
+    "raw_rgb_edge_distance_min": 1.3212151527404785,
+    "raw_rgb_edge_distance_max": 1.7427836656570435,
+    "valid_ratio_mean": 0.8142679398148148,
+    "valid_ratio_min": 0.8125716145833334,
+    "valid_ratio_max": 0.8153157552083333,
+    "fusion_entropy_gain_vs_raw_rgb_mean": 1.387116512169565,
+    "fusion_entropy_gain_vs_raw_rgb_min": 1.3802716247509403,
+    "fusion_entropy_gain_vs_raw_rgb_max": 1.39187417305028,
+    "fusion_alpha_coverage_mean": 0.008713469328703705,
+    "fusion_alpha_coverage_min": 0.008249782986111112,
+    "fusion_alpha_coverage_max": 0.009368489583333334,
+    "raw_refine_dx_mean": -0.6666666666666666,
+    "raw_refine_dx_min": -2.0,
+    "raw_refine_dx_max": 2.0,
+    "raw_refine_dy_mean": 1.3333333333333333,
+    "raw_refine_dy_min": 0.0,
+    "raw_refine_dy_max": 2.0,
+    "raw_refine_accepted_mean": 1.0,
+    "raw_refine_accepted_min": 1.0,
+    "raw_refine_accepted_max": 1.0
+  }
+}

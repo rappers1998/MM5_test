@@ -1,0 +1,81 @@
+{
+  "strategy": "calibration_plane",
+  "output": "darklight_mm5\\outputs_calibration_plane",
+  "reference_output": "darklight_mm5\\outputs",
+  "selected_parameters": {
+    "lwir_calib_size": "1280x720",
+    "plane_depth_mm": 350.0,
+    "t_scale": 1.45,
+    "lwir_principal_offset": [
+      20.0,
+      0.0
+    ],
+    "max_residual_shift": 0
+  },
+  "sample_count": 3,
+  "means": {
+    "target_ncc": 0.259933,
+    "target_mi": 0.53415,
+    "target_edge_distance": 5.6309466666666665,
+    "target_valid_ratio": 0.8324159999999999,
+    "raw_rgb_ncc": 0.2403296666666667,
+    "raw_rgb_edge_distance": 2.6925806666666663,
+    "valid_ratio": 0.8324159999999999,
+    "fusion_entropy_gain_vs_raw_rgb": 1.3860776666666668,
+    "fusion_alpha_coverage": 0.008846333333333333
+  },
+  "per_sample": [
+    {
+      "sample": "103_seq385",
+      "aligned_id": "103",
+      "sequence": "385",
+      "target_ncc": "0.367887",
+      "target_mi": "0.493836",
+      "target_edge_distance": "4.055183",
+      "target_valid_ratio": "0.832416",
+      "raw_rgb_ncc": "0.309840",
+      "raw_rgb_edge_distance": "3.558179",
+      "valid_ratio": "0.832416",
+      "fusion_entropy_gain_vs_raw_rgb": "1.391444",
+      "fusion_alpha_coverage": "0.008511"
+    },
+    {
+      "sample": "104_seq386",
+      "aligned_id": "104",
+      "sequence": "386",
+      "target_ncc": "0.161271",
+      "target_mi": "0.559836",
+      "target_edge_distance": "6.089072",
+      "target_valid_ratio": "0.832416",
+      "raw_rgb_ncc": "0.151904",
+      "raw_rgb_edge_distance": "3.099674",
+      "valid_ratio": "0.832416",
+      "fusion_entropy_gain_vs_raw_rgb": "1.387786",
+      "fusion_alpha_coverage": "0.008492"
+    },
+    {
+      "sample": "106_seq388",
+      "aligned_id": "106",
+      "sequence": "388",
+      "target_ncc": "0.250641",
+      "target_mi": "0.548778",
+      "target_edge_distance": "6.748585",
+      "target_valid_ratio": "0.832416",
+      "raw_rgb_ncc": "0.259245",
+      "raw_rgb_edge_distance": "1.419889",
+      "valid_ratio": "0.832416",
+      "fusion_entropy_gain_vs_raw_rgb": "1.379003",
+      "fusion_alpha_coverage": "0.009536"
+    }
+  ],
+  "visual_review_paths": [
+    "darklight_mm5\\outputs_calibration_plane\\evaluation_panels\\103_seq385_evaluation_panel.png",
+    "darklight_mm5\\outputs_calibration_plane\\evaluation_panels\\104_seq386_evaluation_panel.png",
+    "darklight_mm5\\outputs_calibration_plane\\evaluation_panels\\106_seq388_evaluation_panel.png"
+  ],
+  "notes": [
+    "The official-reference output is used only as an evaluation target, not as an input to the calibration-plane run.",
+    "The current version keeps a broad valid area and positive raw RGB/LWIR NCC on all three selected dark samples.",
+    "The fusion view is enhanced for inspection; registration should be judged from target/raw metrics and edge overlays."
+  ]
+}

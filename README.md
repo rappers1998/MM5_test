@@ -1,101 +1,127 @@
-# MM5 Multimodal Registration Workspace
+# MM5_test: MM5 多模态图像实时配准与融合工作区
 
-这是一个围绕 MM5 多模态数据集建立的配准、标定和评估工作区。项目的核心目标是：
+这个仓库是围绕 MM5 多模态数据集建立的配准、标定、评估和 FPGA 实时化工作区。当前主线目标是：在不把 MM5 aligned 图像用于参数反推的前提下，利用用户自己的标定数据、原始 RGB/LWIR/depth 图像、棋盘格采集和近红外单点激光测距机信息，逐步形成可以部署到 FPGA 的多模态图像实时配准与融合方案。
 
-1. 复现和比较多种 RGB、LWIR、UV、depth 相关的跨模态配准思路。
-2. 在不使用 MM5 aligned 图像参与生成的前提下，尽量用用户自己的标定数据和原始传感器数据重建接近原文 aligned 的配准质量。
-3. 保留可复现实验记录、指标、可视化面板和阶段性结论，方便后续继续优化、复现实验或撰写报告。
+当前最重要的两个成果是：
 
-当前最重要的成果是 [`darklight_mm5/calibration_only_method`](darklight_mm5/calibration_only_method/) 下的 Phase25 深度辅助配准方案。它在三张选定暗光样本 `106,104,103` 上达到：
+1. `darklight_mm5/calibration_only_method` 中的 Phase25 depth-assisted registration。它是目前离线验证效果最好的 MM5 calibration-only 配准方案。
+2. `peizhun_jiguang` 中的 DA1501A 近红外单点激光测距机辅助 FPGA 方案。它把 Phase25 的几何思想转成一个可综合的单 HLS IP：`phase25_laser_register_fuse_ip_top`。
 
-| Method | RGB NCC mean/min | LWIR NCC mean/min | Note |
-|---|---:|---:|---|
-| Phase24 baseline | `0.9865 / 0.9724` | `0.9182 / 0.9118` | checkerboard-derived LWIR affine |
-| Phase25 promoted | `0.9865 / 0.9724` | `0.9321 / 0.9261` | depth-assisted residual registration |
-| retained bridge target | - | `0.9233 / 0.9064` | previous MM5 aligned bridge level |
+## 当前结论
 
-也就是说，Phase25 在这三张样本上已经超过 retained bridge 的 LWIR NCC mean/min，同时保持 RGB aligned 级别不下降。
+### Phase25 离线配准效果
+
+Phase25 在三张选定暗光样本 `106,104,103` 上保持 RGB 对齐质量不退化，同时提升 LWIR 配准质量。
+
+| 方法 | RGB NCC mean/min | LWIR NCC mean/min | LWIR edge distance mean | 说明 |
+|---|---:|---:|---:|---|
+| Phase24 baseline | `0.9865 / 0.9724` | `0.9182 / 0.9118` | `15.2661 px` | 棋盘格推导的 LWIR affine |
+| Phase25 registration only | `0.9865 / 0.9724` | `0.9237 / 0.9174` | `16.9251 px` | raw depth boundary 选择 residual shift |
+| Phase25 promoted | `0.9865 / 0.9724` | `0.9321 / 0.9261` | `14.8499 px` | residual shift + depth border fill |
+| retained bridge target | - | `0.9233 / 0.9064` | - | 之前 aligned bridge 水平 |
+
+当前推荐候选：
+
+```text
+phase25_depth_registered_global_shift_depth_fill
+```
+
+这说明在这三张样本上，Phase25 promoted 已经超过 retained bridge 的 LWIR NCC mean/min，同时 RGB 仍保持 aligned-level 的 `0.9865 / 0.9724`。
+
+### FPGA 激光辅助配准状态
+
+最终 FPGA 方向不是复制 dense depth 图像，而是把 Phase25 的几何结构转成“单点距离测量 + range-bin LUT + 固定点 LWIR warp + RGB/LWIR fusion”的实时方案。
+
+当前 FPGA 目标器件暂定：
+
+```text
+xczu15eg
+```
+
+当前 HLS 具体 part：
+
+```text
+xczu15eg-ffvb1156-2-e
+```
+
+最终只保留一个导出的 HLS IP top：
+
+```text
+phase25_laser_register_fuse_ip_top
+```
+
+这个单 IP 已经合并以下功能：
+
+- DA1501A Protocol 1 接收帧解析；
+- checksum、reserved byte、status 检查；
+- distance_mm、range age、valid/stale/blind-zone/fallback 状态维护；
+- Phase24 fallback geometry；
+- Phase25-seeded range-bin 参数选择；
+- fixed-point LWIR inverse affine warp；
+- packed RGB/LWIR fusion；
+- debug 输出：距离、状态 flags、range age。
+
+当前 unified IP HLS synthesis 结果：
+
+| Top | Part | Estimated clock | Fmax | Latency | Resource |
+|---|---|---:|---:|---:|---|
+| `phase25_laser_register_fuse_ip_top` | `xczu15eg-ffvb1156-2-e` | `7.300 ns` | `136.99 MHz` | `307244-307310 cycles`, about `3.072-3.073 ms` per `640x480` frame | `0 BRAM18K`, `8 DSP`, `4281 FF`, `7302 LUT`, `0 URAM` |
+
+重要限制：DA1501A 是单点测距机，并且资料中存在近距离盲区。当前 MM5 近距离桌面样本不能直接声称已经达到真实 DA1501A 实测 Phase25 性能。现在的 FPGA IP 是 Phase25 seed/fallback + 激光 range-bin 结构，后续还需要真实 laser-to-camera 标定和 range-bin 采样。
 
 ## 快速入口
 
-- [Phase25 方法说明](darklight_mm5/calibration_only_method/README.md)：当前最佳 depth-assisted registration 的设计、约束、指标和文件索引。
-- [Phase25 主脚本](darklight_mm5/calibration_only_method/run_phase25_depth_assisted.py)：一键复现三张测试图的入口。
-- [Phase25 实验报告](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/phase25_depth_assisted_report.md)：每个候选结果、指标和结论。
-- [Phase25 summary CSV](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_assisted_summary.csv)：候选方法的 RGB/LWIR NCC 与边界指标总表。
-- [Depth registration scores](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_registration_scores.csv)：depth foreground boundary 用来选择 residual shift 的评分表。
-- [Calibration files](calibration/)：Phase25 允许使用的标定数据。
-- [MM5 benchmark framework](mm5_calib_benchmark/)：多方法 benchmark 与 Scene 282 对比框架。
-- 本地协作记录：`task_plan.md`、`findings.md`、`progress.md`，继续优化前建议先阅读。
+| 目标 | 入口 |
+|---|---|
+| 读当前最佳配准方法 | [`darklight_mm5/calibration_only_method/README.md`](darklight_mm5/calibration_only_method/README.md) |
+| 运行 Phase25 | [`darklight_mm5/calibration_only_method/run_phase25_depth_assisted.py`](darklight_mm5/calibration_only_method/run_phase25_depth_assisted.py) |
+| 看 Phase25 报告 | [`darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/reports/dl_p25_report_p25.md`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/reports/dl_p25_report_p25.md) |
+| 看 Phase25 指标 | [`dl_p25_sum_p25.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_sum_p25.csv) |
+| 看 depth residual shift 评分 | [`dl_p25_score_p25.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_score_p25.csv) |
+| 读 FPGA 激光辅助方案 | [`peizhun_jiguang/README.md`](peizhun_jiguang/README.md) |
+| 读 FPGA strategy | [`peizhun_jiguang/docs/fpga_strategy.md`](peizhun_jiguang/docs/fpga_strategy.md) |
+| 读 DA1501A 协议整理 | [`peizhun_jiguang/docs/rangefinder_protocol.md`](peizhun_jiguang/docs/rangefinder_protocol.md) |
+| 读验证计划 | [`peizhun_jiguang/docs/verification_plan.md`](peizhun_jiguang/docs/verification_plan.md) |
+| 读文档目录索引 | [`docs/README.md`](docs/README.md) |
+| 追踪任务计划 | [`task_plan.md`](task_plan.md) |
+| 追踪实验发现 | [`findings.md`](findings.md) |
+| 追踪执行进度 | [`progress.md`](progress.md) |
 
 ## 核心原则
 
-Phase25 的生成路径只允许使用：
+Phase25 的生成阶段允许使用：
 
-- [`calibration/`](calibration/) 中的标定文件；
-- MM5 index 指向的原始 RGB1、LWIR16、depth 图像；
+- `calibration/` 中的相机标定文件；
+- MM5 index 指向的 raw RGB1、raw LWIR16、raw depth 图像；
 - 原始 calibration-board captures；
-- 固定的几何、棋盘格角点、depth 前景边界等从原始数据和标定数据计算出的信息。
+- 从原始数据和标定数据计算出的棋盘格角点、board correspondence、depth foreground boundary；
+- 固定几何模型、固定输出 canvas、固定 crop/affine 参数。
 
-Phase25 不允许使用：
+Phase25 的生成阶段不允许使用：
 
-- MM5 aligned RGB/T16 作为配准参数来源；
-- teacher residual、aligned template、official transform 之类从参考结果反推的参数；
-- 用 aligned 图像对每个样本做单独拟合或调参。
+- MM5 aligned RGB/T16 图像作为配准参数来源；
+- official aligned transform、aligned template、teacher residual 等从参考结果反推的参数；
+- 针对单张样本读取 aligned 图像后做 per-sample fitting 或调参。
 
-MM5 aligned 图像只在最后评估阶段读取，用来报告 NCC、edge distance 等指标。
+MM5 aligned 图像只在评估阶段读取，用于报告 NCC、edge distance 等指标。这个约束是本仓库区分“复现 aligned 效果”和“偷用 aligned 结果反推参数”的核心边界。
 
-## 当前最佳方案：Phase25
-
-主入口是 [`run_phase25_depth_assisted.py`](darklight_mm5/calibration_only_method/run_phase25_depth_assisted.py)：
-
-```powershell
-python .\darklight_mm5\calibration_only_method\run_phase25_depth_assisted.py --aligned-ids 106,104,103
-```
-
-主输出目录是 [`outputs_phase25_depth_assisted`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/)：
+## 仓库结构
 
 ```text
-darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/
-```
-
-核心输出文件：
-
-- [Phase25 子目录 README](darklight_mm5/calibration_only_method/README.md)
-- [Phase25 实验报告](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/phase25_depth_assisted_report.md)
-- [候选方法 summary CSV](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_assisted_summary.csv)
-- [候选方法 summary JSON](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_assisted_summary.json)
-- [depth residual shift 评分](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_registration_scores.csv)
-- [棋盘格 correspondence 表](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_board_correspondences.csv)
-- [棋盘格 transform 表](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_board_transforms.csv)
-- [可视化 panels](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/panels/)
-
-Phase25 的逻辑是：
-
-1. 保留 Phase21 的 RGB canvas，使 RGB 对 MM5 aligned RGB 的 NCC 保持 `0.9865 / 0.9724`。
-2. 使用 Phase23 从 calibration-board corners 得到的 LWIR crop offset `(280,115)`。
-3. 使用 Phase24 从 `1848` 个 checkerboard correspondence points 拟合出的 `affine_lmeds` LWIR residual transform。
-4. 将 raw depth 裁剪到固定 RGB canvas。
-5. 用 `depth < 1000 mm` 提取近景 foreground boundary。
-6. 在 `2 px` 半径内搜索一个三张图共享的 LWIR residual translation。
-7. 由 depth-boundary-to-LWIR-edge distance 选择 `dx=-2 px, dy=+2 px`。
-8. 只用 dense depth projection 填补 residual shift 后产生的新边界无效区。
-
-这一步是真正的 depth-assisted registration：depth 不是只用来补洞，而是参与 residual registration 参数选择。最终 promoted candidate 是 `phase25_depth_registered_global_shift_depth_fill`，含义是先用 depth boundary 选择共享 residual shift，再只对新产生的边界无效区做 depth dense projection fill。
-
-## 项目目录结构
-
-```text
-MAR_bianyuan/
+MM5_test/
 |- calibration/
 |- darklight_mm5/
 |  |- calibration_only_method/
-|  |- run_darklight.py
-|  `- legacy/older experiment files and ignored outputs
+|  |- docs/
+|  |- outputs/
+|  |- outputs_calibration_plane*/
+|  `- teacher_residual_method/
 |- mm5_calib_benchmark/
 |- mar_scholar_compare/
 |- mm5_ivf/
-|- docs/
+|- peizhun_jiguang/
 |- runs/
+|- docs/
 |- task_plan.md
 |- findings.md
 |- progress.md
@@ -103,73 +129,175 @@ MAR_bianyuan/
 `- README.md
 ```
 
-下面按逻辑介绍每个目录的职责。
+## `calibration/`
 
-## [`calibration/`](calibration/)
+这里保存项目使用的相机标定文件，是 Phase25、benchmark 和 FPGA 参数导出的共同基础。
 
-这里保存项目使用的相机标定文件，是 Phase25 和 benchmark 方法的共同基础。
+典型文件：
 
-重要文件：
+- `def_stereocalib_THERM.yml`: RGB/LWIR stereo calibration，包含 `CM1/CM2/R/T/R1/R2/P1/P2` 等参数。
+- `def_thermalcam_ori.yml`: raw thermal camera intrinsics，用于 raw LWIR rectification/projection。
+- `def_stereocalib_UV.yml`、`def_uvcam_ori.yml`: UV 方向相关标定。
+- `def_stereocalib_cam.yml`: RGB/depth 或相机组相关标定。
+- `calib_device_0.json`、`calib_device_1.json`: 设备级标定信息。
 
-- [`def_stereocalib_THERM.yml`](calibration/def_stereocalib_THERM.yml)：RGB/LWIR stereo calibration、`R1/R2/P1/P2` 等 rectification 参数。
-- [`def_thermalcam_ori.yml`](calibration/def_thermalcam_ori.yml)：raw thermal camera intrinsics，Phase25 和前置 Phase 中用于 raw LWIR rectification/projection。
-- [`def_stereocalib_UV.yml`](calibration/def_stereocalib_UV.yml)、[`def_uvcam_ori.yml`](calibration/def_uvcam_ori.yml)：UV 方向相关标定。
-- [`def_stereocalib_cam.yml`](calibration/def_stereocalib_cam.yml)：RGB/depth 或相机组相关标定。
-- [`calib_device_0.json`](calibration/calib_device_0.json)、[`calib_device_1.json`](calibration/calib_device_1.json)：设备级标定信息。
+这些文件属于允许参与生成的标定数据。
 
-这些文件是允许参与生成的标定数据。
+## `darklight_mm5/`
 
-## [`darklight_mm5/`](darklight_mm5/)
+这是围绕 MM5 dark/light 样本做配准实验的主要工作区。
 
-这是围绕 MM5 dark/light 样本做配准实验的工作区。当前主线是 calibration-only / depth-assisted 的 Phase25，不再依赖 aligned-derived teacher residual。
+### `darklight_mm5/calibration_only_method/`
 
-### [`darklight_mm5/calibration_only_method/`](darklight_mm5/calibration_only_method/)
-
-这是当前最重要的目录，保存“只基于标定数据和原始输入”的 aligned-style 重建方法。
+当前最重要的离线算法目录。它保存只基于标定数据和原始输入的 aligned-style 重建方法。
 
 关键文件：
 
-- [`run_phase25_depth_assisted.py`](darklight_mm5/calibration_only_method/run_phase25_depth_assisted.py)：当前最佳 Phase25 主入口。
-- [`README.md`](darklight_mm5/calibration_only_method/README.md)：Phase25 方案细节、指标和命令。
-- [`outputs_phase25_depth_assisted/`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/)：当前最佳输出，包含 [`metrics`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/)、[`panels`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/panels/) 和 [report](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/phase25_depth_assisted_report.md)。
-- [`run_phase21_canvas_optimization.py`](darklight_mm5/calibration_only_method/run_phase21_canvas_optimization.py)、[`run_phase22_stereo_recalib.py`](darklight_mm5/calibration_only_method/run_phase22_stereo_recalib.py)、[`run_phase23_lwir_board_offset.py`](darklight_mm5/calibration_only_method/run_phase23_lwir_board_offset.py)、[`run_phase24_lwir_board_affine.py`](darklight_mm5/calibration_only_method/run_phase24_lwir_board_affine.py)：Phase25 复用的稳定 helper 代码。旧输出已经不再保留，但这些脚本仍被 Phase25 import。
-- [`diagnose_aligned_canvas.py`](darklight_mm5/calibration_only_method/diagnose_aligned_canvas.py)、[`run_calibration_only.py`](darklight_mm5/calibration_only_method/run_calibration_only.py)：历史诊断和早期 calibration-only baseline，作为研究记录和 helper 来源保留。
+- `run_phase25_depth_assisted.py`: 当前最佳 Phase25 主入口。
+- `README.md`: Phase25 方法细节、指标和命令说明。
+- `outputs_phase25_depth_assisted/`: 当前最佳输出。
+- `outputs_phase25_depth_assisted/metrics/`: 指标表。
+- `outputs_phase25_depth_assisted/panels/`: 可视化对照图。
+- `outputs_phase25_depth_assisted/reports/`: 报告。
+- `run_phase21_canvas_optimization.py`: RGB canvas 相关 helper。
+- `run_phase22_stereo_recalib.py`: stereo recalibration helper。
+- `run_phase23_lwir_board_offset.py`: LWIR board offset helper。
+- `run_phase24_lwir_board_affine.py`: checkerboard-derived LWIR affine helper。
+- `diagnose_aligned_canvas.py`: aligned canvas 诊断工具。
+- `run_calibration_only.py`: 早期 calibration-only baseline。
 
-旧 Phase 输出目录已经从工作区清理或在 [`.gitignore`](.gitignore) 中排除；当前可复现结果集中在 Phase25。
+Phase25 逻辑：
 
-### [`darklight_mm5/run_darklight.py`](darklight_mm5/run_darklight.py)
+1. 保留 Phase21 的 fixed RGB canvas，使 RGB 对 MM5 aligned RGB 的 NCC 保持 `0.9865 / 0.9724`。
+2. 复用 Phase23 的 LWIR crop offset `(280,115)`。
+3. 复用 Phase24 从 `1848` 个 checkerboard correspondence points 拟合出的 `affine_lmeds` LWIR residual transform。
+4. 把 raw depth 裁剪到固定 RGB canvas。
+5. 使用 `depth < 1000 mm` 提取近景 foreground boundary。
+6. 在 `2 px` 半径内搜索三张图共享的 LWIR residual translation。
+7. 用 depth-boundary-to-LWIR-edge distance 选择 `dx=-2 px, dy=+2 px`。
+8. 只对 residual shift 后新产生的边界无效区域做 dense raw-depth LWIR projection fill。
 
-早期 dark/light 注册与评估工具，Phase25 复用了其中的图像读取、归一化、NCC/edge metric、panel 生成等基础函数。
+Phase25 的 depth 不是只用于补洞，它参与 residual registration 参数选择，因此是真正的 depth-assisted registration。
 
-### 旧实验输出和 teacher residual 目录
+运行命令：
 
-以下目录属于旧实验或低效果阶段，已被 [`.gitignore`](.gitignore) 排除，不作为当前最佳结果保留：
+```powershell
+Set-Location 'E:\aa_read_yan\aMAR\MAR_bianyuan'
+python .\darklight_mm5\calibration_only_method\run_phase25_depth_assisted.py --aligned-ids 106,104,103
+```
 
-- `darklight_mm5/outputs/`
-- `darklight_mm5/outputs_calibration_plane*/`
-- `darklight_mm5/teacher_residual_method/`
-- `darklight_mm5/calibration_only_method/outputs_phase20_canvas/`
-- `darklight_mm5/calibration_only_method/outputs_phase21_canvas/`
-- `darklight_mm5/calibration_only_method/outputs_phase22_stereo_recalib/`
-- `darklight_mm5/calibration_only_method/outputs_phase23_lwir_board_offset/`
-- `darklight_mm5/calibration_only_method/outputs_phase24_lwir_board_affine/`
+核心输出：
 
-这些旧阶段对分析有价值，但不是当前最佳版本。
+- [`dl_p25_sum_p25.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_sum_p25.csv): candidate summary。
+- [`dl_p25_sum_p25.json`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_sum_p25.json): summary JSON。
+- [`dl_p25_met_p25.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_met_p25.csv): 逐样本、逐 candidate 指标。
+- [`dl_p25_score_p25.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_score_p25.csv): depth boundary residual shift 评分。
+- [`dl_p25_board_pts.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_board_pts.csv): 棋盘格 correspondence 点。
+- [`dl_p25_board_tf.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_board_tf.csv): board-derived transform。
+- [`dl_p25_report_p25.md`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/reports/dl_p25_report_p25.md): Phase25 报告。
 
-## [`mm5_calib_benchmark/`](mm5_calib_benchmark/)
+### `darklight_mm5/outputs*`
 
-这是更完整的 MM5 多方法 benchmark 框架，用来比较不同跨模态配准/标定方法。
+这些目录保存历史 dark/light、calibration-plane、optimized plane、boundary optimization 等输出。它们已经在 Phase30 中统一短命名，例如：
 
-它包含：
+- `dl_ref_*`: reference/早期 darklight 输出；
+- `dl_plane_*`: calibration-plane 输出；
+- `dl_opt_*`: optimized calibration-plane 输出；
+- `dl_bnd_*`: boundary optimization 输出；
+- `dl_tflow_*`、`dl_tsample_*`、`dl_tdiag_*`: teacher residual 输出。
 
-- [`configs/`](mm5_calib_benchmark/configs/)：全局配置和各方法配置。
-- [`methods/`](mm5_calib_benchmark/methods/)：M0 到 M7 的方法实现，例如 official baseline、Zhang-style calibration、depth bridge、EPnP、MAR edge refine、depth-guided self calibration。
-- [`eval/`](mm5_calib_benchmark/eval/)：几何、mask、boundary、NCC 等评估指标。
-- [`viz/`](mm5_calib_benchmark/viz/)：可视化工具。
-- [`scripts/`](mm5_calib_benchmark/scripts/)：生成 split、运行 benchmark、生成 Scene 282 对比图和文档的入口。
-- [`pipeline.py`](mm5_calib_benchmark/pipeline.py)：benchmark 主流程调度。
-- [`config.py`](mm5_calib_benchmark/config.py)：数据路径和配置加载辅助。
-- `outputs/mm5_benchmark/`：benchmark 输出和 Scene 282 对比材料，属于分析产物。
+这些目录对分析有价值，但当前最佳主线仍是 `calibration_only_method/outputs_phase25_depth_assisted`。
+
+### `darklight_mm5/teacher_residual_method/`
+
+这是 teacher-guided residual alignment 的历史探索目录。它曾用于理解上界和诊断 residual flow，但它读取 official/reference aligned 结果用于离线 teacher，因此不作为最终 deployment 方法。
+
+当前保留它的原因：
+
+- 作为对比和诊断基线；
+- 保存 residual flow 上界；
+- 帮助解释 Phase25 为什么必须坚持 calibration/raw-only 边界。
+
+## `peizhun_jiguang/`
+
+这是把 Phase25 推向 FPGA 实时配准和融合的核心目录。
+
+目标变化：
+
+- 离线 Phase25 使用 dense depth boundary 选择 residual shift；
+- FPGA 运行时不能依赖 dense depth、OpenCV 搜索或 MM5 aligned 图像；
+- 近红外单点激光测距机只提供一个距离值；
+- 因此 FPGA 方案使用 range-bin LUT 替代 dense-depth residual search。
+
+目录结构：
+
+```text
+peizhun_jiguang/
+|- config/
+|  `- laser_registration_params.json
+|- docs/
+|  |- fpga_strategy.md
+|  |- rangefinder_protocol.md
+|  `- verification_plan.md
+|- generated/
+|  |- laser_lut.csv
+|  |- laser_lut.h
+|  `- laser_lut.json
+|- hls/
+|  |- laser_fusion.hpp
+|  |- laser_fusion.cpp
+|  |- tb_laser_fusion.cpp
+|  |- run_hls.tcl
+|  |- run_hls_synth.tcl
+|  |- run_vitis_hls.ps1
+|  |- run_vitis_hls_synth.ps1
+|  `- run_manual_clang_check.ps1
+`- scripts/
+   `- export_laser_lut.py
+```
+
+推荐流程：
+
+```powershell
+python .\peizhun_jiguang\scripts\export_laser_lut.py `
+  --config .\peizhun_jiguang\config\laser_registration_params.json `
+  --output-dir .\peizhun_jiguang\generated
+```
+
+手动 C++ 验证：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\peizhun_jiguang\hls\run_manual_clang_check.ps1
+```
+
+Vitis HLS synthesis 脚本：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\peizhun_jiguang\hls\run_vitis_hls_synth.ps1
+```
+
+当前 HLS 注意事项：
+
+- 当前 shell 中 `vitis_hls` 不在 PATH。
+- 已找到 Vitis HLS 2022.1 路径：`F:\Vivado\vivado2022.1\Vitis_HLS\2022.1\bin\vitis_hls.bat`。
+- 当前 shell 直接跑 Vitis wrapper 可能遇到 Xilinx bundled MSYS `tee.exe/cat.exe` Win32 error 5。
+- 已使用 manual clang check 作为代码级验证 fallback。
+- synthesis 已在 `xczu15eg-ffvb1156-2-e` 上通过。
+
+## `mm5_calib_benchmark/`
+
+这是更完整的 MM5 多方法 benchmark 框架，用于比较不同跨模态配准和标定方法。
+
+重要子目录：
+
+- `configs/`: 全局配置和方法配置。
+- `methods/`: M0 到 M7 的方法实现，例如 official baseline、Zhang/OpenCV、depth bridge、EPnP、MAR edge refine、depth-guided self calibration。
+- `eval/`: geometry、mask、boundary、NCC 等评估指标。
+- `viz/`: 可视化工具。
+- `scripts/`: split 生成、benchmark 运行、Scene 282 对比图和文档生成入口。
+- `outputs/mm5_benchmark/`: benchmark 输出和 Scene 282 对比材料。
 
 常用入口：
 
@@ -179,43 +307,69 @@ python -m mm5_calib_benchmark.scripts.run_all_methods
 python -m mm5_calib_benchmark.scripts.make_scene_2823_comparison
 ```
 
-## [`mar_scholar_compare/`](mar_scholar_compare/)
+重要保留文件：
 
-这里保存 Scene 282 相关的论文/历史 MAR 对比材料，更偏分析和展示，不是 Phase25 的主运行路径。
+```text
+mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv
+```
 
-它的作用是帮助理解：
+这个文件是样本/路径配对索引，不是普通输出 artifact，Phase30 整理时特意保留原名。
 
-- 历史 MAR 结果与当前 benchmark 结果的差异；
-- Scene 282 中不同指标如何解释；
-- visual panel、ranking bar、normalized error heatmap 等材料如何阅读。
+## `mar_scholar_compare/`
+
+这里保存 Scene 282 相关的论文式、历史 MAR 对比材料。它更偏分析和展示，不是 Phase25 主运行路径。
+
+用途：
+
+- 对比历史 MAR 结果与当前 benchmark 结果；
+- 解释 Scene 282 中不同指标；
+- 生成 visual panel、ranking bar、normalized error heatmap 等材料。
 
 ## `mm5_ivf/`
 
-这是另一个与 MM5 相关的实验/可视化或融合方向工作区。它不是当前 Phase25 配准主线，但作为历史实验记录保留。
+这是另一条与 MM5 相关的实验、可视化或融合方向工作区。它不是当前 Phase25 配准主线，但作为历史实验记录保留。
+
+## `runs/`
+
+保存阶段性运行结果、人工分析文件、Word 报告和中间产物。Phase30 后，Word 汇总材料已整理到：
+
+```text
+runs/reports/word/
+```
 
 ## `docs/`
 
-保存协作过程中的设计文档和规格说明，例如之前的 teacher-guided residual alignment 设计文档。
+项目级文档、清单和整理工具集中在这里。
 
-这些文档记录了探索路径，但当前最佳实现仍以 Phase25 为准。
+重要文件：
 
-## [`runs/`](runs/)
+- [`docs/README.md`](docs/README.md): 文档目录索引。
+- [`docs/manifests/rename_manifest_20260428.csv`](docs/manifests/rename_manifest_20260428.csv): Phase30 artifact 重命名映射。
+- [`docs/manifests/document_reorg_manifest_20260428.csv`](docs/manifests/document_reorg_manifest_20260428.csv): 文档整理移动映射。
+- [`docs/tools/rename_artifacts_phase30.ps1`](docs/tools/rename_artifacts_phase30.ps1): Phase30 短命名脚本。
+- `docs/superpowers/specs/`: 之前阶段的方法设计记录。
 
-保存阶段性运行结果、人工分析文件、旧报告或中间产物。它更像实验记录区，而不是主代码入口。
+Phase30 整理结果：
+
+- artifact rename rows: `3151`；
+- document move rows: `23`；
+- old paths still present: `0`；
+- new paths missing: `0`；
+- selected output artifact bad basenames: `0`。
 
 ## 根目录规划文件
 
-这些文件是持续协作时的工作记忆：
+这三个文件是持续协作时的工作记忆：
 
-- `task_plan.md`：阶段计划、当前决策、目标和状态。
-- `findings.md`：实验发现、指标结论、失败路径和分析。
-- `progress.md`：逐步运行记录、验证命令和清理记录。
+- [`task_plan.md`](task_plan.md): 阶段计划、当前目标、决策和状态。
+- [`findings.md`](findings.md): 实验发现、指标结论、失败路径和分析。
+- [`progress.md`](progress.md): 逐步运行记录、验证命令、清理和同步记录。
 
-如果后续继续优化，建议先读这三个文件再动代码。
+继续优化前建议先读这三个文件，尤其是 `findings.md` 中的 Phase25、Phase29、Phase30 记录。
 
 ## 数据依赖
 
-仓库本身不包含完整 MM5 原始数据。很多 index 路径指向本机数据目录，例如：
+仓库中保存了代码、标定、输出和分析材料，但完整 MM5 原始数据通常仍位于本机路径，例如：
 
 ```text
 D:\a三模数据\MM5_RAW\...
@@ -223,86 +377,144 @@ D:\a三模数据\MM5_ALIGNED\...
 D:\a三模数据\MM5_CALIBRATION\...
 ```
 
-要重新运行 Phase25，需要这些路径在当前机器上真实存在。
+重新运行 Phase25 时，需要 index 指向的 raw RGB、raw LWIR、raw depth、aligned evaluation 图像在当前机器上真实存在。
 
-Phase25 会读取 aligned 图像做评估，但不会用 aligned 图像生成或选择参数。
+注意：Phase25 会读取 aligned 图像做评估，但不会用 aligned 图像生成或选择配准参数。
 
 ## 环境依赖
 
-主要 Python 包：
+主要 Python 依赖：
 
 - `numpy`
 - `opencv-python`
 - `scipy`
 - `scikit-image`
-- `python-docx`，仅部分文档生成脚本需要
+- `python-docx`
 
-推荐在项目根目录使用已有 `.venv` 或同等 Python 环境运行。
+推荐使用项目根目录已有 `.venv` 或等价 Python 环境。`.venv` 不同步到 GitHub。
 
-## 推荐使用流程
+FPGA/HLS 相关：
 
-### 1. 只复现当前最佳 Phase25
+- Vitis HLS 2022.1 已在本机发现；
+- 临时目标器件族为 `xczu15eg`；
+- 当前综合 full part 为 `xczu15eg-ffvb1156-2-e`；
+- HLS 生成工程目录和本地 build 产物不纳入 GitHub 同步。
+
+## 推荐复现流程
+
+### 1. 复现当前最佳 Phase25
 
 ```powershell
 Set-Location 'E:\aa_read_yan\aMAR\MAR_bianyuan'
 python .\darklight_mm5\calibration_only_method\run_phase25_depth_assisted.py --aligned-ids 106,104,103
 ```
 
-然后查看：
+看报告：
 
 ```text
-darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/phase25_depth_assisted_report.md
+darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/reports/dl_p25_report_p25.md
 ```
 
-### 2. 查看可视化面板
+看 summary：
+
+```text
+darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/dl_p25_sum_p25.csv
+```
+
+看 panels：
 
 ```text
 darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/panels/
 ```
 
-其中 promoted candidate 文件名包含：
+### 2. 导出激光 range-bin LUT
 
-```text
-phase25_depth_registered_global_shift_depth_fill
+```powershell
+python .\peizhun_jiguang\scripts\export_laser_lut.py `
+  --config .\peizhun_jiguang\config\laser_registration_params.json `
+  --output-dir .\peizhun_jiguang\generated
 ```
 
-### 3. 看指标表
+### 3. 验证 FPGA HLS C++ 代码级行为
 
-```text
-darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_assisted_summary.csv
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\peizhun_jiguang\hls\run_manual_clang_check.ps1
 ```
 
-重点看：
+期望输出：
 
-- `eval_rgb_to_mm5_aligned_rgb_ncc_mean`
-- `eval_lwir_to_mm5_aligned_t16_ncc_mean`
-- `eval_lwir_to_mm5_aligned_t16_ncc_min`
-- `eval_lwir_to_mm5_aligned_t16_edge_distance_mean`
+```text
+tb_laser_fusion PASS
+```
 
-## 输出文件索引
+### 4. HLS synthesis
 
-Phase25 的输出按用途分成三类：
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\peizhun_jiguang\hls\run_vitis_hls_synth.ps1
+```
 
-- 指标表：[`phase25_depth_assisted_summary.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_assisted_summary.csv)、[`phase25_depth_assisted_metrics.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_assisted_metrics.csv)、[`phase25_depth_assisted_summary.json`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_assisted_summary.json)。
-- 几何来源：[`phase25_board_correspondences.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_board_correspondences.csv)、[`phase25_board_transforms.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_board_transforms.csv)。
-- depth 辅助选择：[`phase25_depth_registration_scores.csv`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/metrics/phase25_depth_registration_scores.csv)。
-- 可视化：[`panels/`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/panels/) 中每张样本都有 Phase24 baseline、Phase25 registration-only、promoted depth-fill、raw depth projection 和 median hole-fill control 等对照图。
-- 报告：[`phase25_depth_assisted_report.md`](darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/phase25_depth_assisted_report.md) 汇总了候选方法、指标和当前结论。
+最终导出 IP top：
 
-这些输出共同回答两个问题：第一，Phase25 是否保持 RGB 的 aligned-level NCC；第二，LWIR 是否在不借助 aligned 反推参数的情况下超过 retained bridge 目标。
+```text
+phase25_laser_register_fuse_ip_top
+```
 
-## 指标解释
+## 文件命名规则
 
-- `RGB NCC mean/min`：生成 RGB 与 MM5 aligned RGB 的归一化互相关，用来确认 RGB canvas 没有因为 LWIR 优化而退化。
-- `LWIR NCC mean/min`：生成 LWIR 与 MM5 aligned T16 的归一化互相关，是当前最关注的热红外配准指标。
-- `LWIR edge distance mean`：生成 LWIR 边缘到目标边缘的平均距离，用来检查 NCC 之外的结构对齐质量。
-- `depth registration score`：只由 raw depth 前景边界和生成 LWIR 边缘计算，用来选择共享 residual shift；它不读取 aligned 图像参与参数选择。
+Phase30 后，输出文件使用短前缀区分来源：
 
-## 当前状态总结
+| 前缀 | 含义 |
+|---|---|
+| `dl_p25` | Phase25 depth-assisted registration |
+| `dl_ref` | 早期 darklight/reference 输出 |
+| `dl_plane` | calibration-plane 输出 |
+| `dl_opt` | optimized calibration-plane 输出 |
+| `dl_bnd` | boundary optimization 输出 |
+| `dl_tflow` | teacher residual global flow 输出 |
+| `dl_tsample` | teacher residual sample-flow upper bound |
+| `dl_tdiag` | teacher residual diagnostics |
+| `m0th` 到 `m7th` | benchmark thermal 方法 |
+| `m0uv` 到 `m5uv` | benchmark UV 方法 |
+| `cmp282` | Scene 282 comparison |
+| `legacy_eng` | legacy engineered best |
+| `legacy_pap` | legacy paper final |
+| `run` | runs 目录中的人工/阶段性结果 |
+| `laser` | peizhun_jiguang generated LUT |
 
-- 当前最佳：Phase25 depth-assisted residual registration。
-- 当前三张测试图：`106,104,103`。
-- RGB 已达到 aligned 级别：`0.9865 / 0.9724`。
-- LWIR 已超过 retained bridge：`0.9321 / 0.9261`。
-- 旧 Phase 输出已不再作为最新版内容。
-- 后续若继续优化，应在 Phase25 基础上做小范围验证，而不是回到 teacher/aligned-derived 调参路线。
+两个清单可以用于追溯旧名：
+
+- `docs/manifests/rename_manifest_20260428.csv`
+- `docs/manifests/document_reorg_manifest_20260428.csv`
+
+## GitHub 同步边界
+
+本仓库同步当前项目内容，但以下内容按 `.gitignore` 排除：
+
+- `.venv/`
+- `.git_ssh/`
+- `__pycache__/`
+- `*.pyc`
+- Office 临时文件 `~$*.docx`
+- Vitis HLS 本地生成工程和 build 产物：
+  - `peizhun_jiguang/hls/laser_fusion_prj/`
+  - `peizhun_jiguang/hls/laser_fusion_synth_prj/`
+  - `peizhun_jiguang/hls/laser_range_synth_prj/`
+  - `peizhun_jiguang/hls/manual_build/`
+
+这样 GitHub 上保存的是可阅读、可复现、可继续开发的项目内容，而不是本地虚拟环境、临时构建缓存或私有 Git helper。
+
+## 当前开发路线
+
+1. 保持 Phase25 作为离线 best-known registration baseline。
+2. 在真实 DA1501A + RGB/LWIR 机械安装完成后，采集 laser-to-camera 标定数据。
+3. 把真实距离分段写入 `peizhun_jiguang/config/laser_registration_params.json`。
+4. 重新导出 `laser_lut.*`。
+5. 用 `phase25_laser_register_fuse_ip_top` 做 HLS/IP package。
+6. 在 FPGA 上接入 UART、VDMA/ping-pong frame buffer、RGB/LWIR frame sync 和 fused output。
+7. 用真实硬件采样验证 range-bin 是否能接近 Phase25 离线 dense-depth 水平。
+
+## 当前一句话总结
+
+这个仓库现在包含一条完整链路：从 MM5 raw/calibration-only 的 Phase25 最佳离线配准，到 DA1501A 单点近红外激光测距辅助的 FPGA 单 IP 实时配准与融合原型。Phase25 给出当前效果上界和几何种子，`peizhun_jiguang` 把它转成可综合、可接入实时视频系统的硬件实现路径。

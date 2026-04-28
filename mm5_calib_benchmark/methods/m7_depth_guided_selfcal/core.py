@@ -11,10 +11,10 @@ from scipy import ndimage
 from scipy.optimize import minimize
 from skimage.segmentation import random_walker
 
-from ...common import ensure_dir, modality_preprocess, mutual_information
+from ...common import ensure_dir, load_opencv_yaml, modality_preprocess, mutual_information, save_opencv_yaml
 from ...pipeline import _read_scene_assets
 from ...viz.overlays import mar_like_overlay
-from ..alignment import apply_scene_tuning, compute_depth_alignment, compute_homography_alignment
+from ..alignment import apply_scene_tuning, compute_depth_alignment, compute_homography_alignment, scene_tune_kwargs
 from ..board import build_stereo_dict, evaluate_stereo_on_board
 
 
@@ -365,7 +365,7 @@ def optimize_global_pose(
 
     if cache_path.exists() and final_stereo_path.exists():
         cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))
-        return base_stereo, cache_payload
+        return load_opencv_yaml(final_stereo_path), cache_payload
 
     sampled_rows = _sample_train_rows(
         rows,
@@ -478,6 +478,7 @@ def optimize_global_pose(
     }
     ensure_dir(cache_path.parent)
     cache_path.write_text(json.dumps(_json_ready(cache_payload), indent=2), encoding="utf-8")
+    save_opencv_yaml(final_stereo_path, final_stereo)
     return final_stereo, cache_payload
 
 
@@ -501,16 +502,22 @@ def compute_m7_scene_result(config: dict[str, Any], row: Any, stereo: dict[str, 
         splat_radius=int(method_cfg.get("splat_radius", 1)),
     )
 
-    projected_ratio = float(depth_result.get("debug", {}).get("projected_ratio", 0.0))
-    if projected_ratio < float(method_cfg.get("quality_gate_min_projected_ratio", 0.90)):
-        pred_mask = depth_result["pre_fill_pred_mask"].astype(np.uint8)
+    raw_projected_ratio = float(depth_result.get("debug", {}).get("projected_ratio", 0.0))
+    support_pixels = float(depth_result.get("debug", {}).get("support_pixels", 0))
+    filled_projected_ratio = 0.0
+    if support_pixels > 0.0:
+        filled_projected_ratio = float(depth_result["valid_mask"].sum()) / support_pixels
+    quality_gate_ratio = max(raw_projected_ratio, filled_projected_ratio)
+
+    if quality_gate_ratio < float(method_cfg.get("quality_gate_min_projected_ratio", 0.90)):
+        pred_mask = homography_result["pred_mask"].astype(np.uint8)
         warped_source = homography_result["warped_source"]
         valid_mask = homography_result["valid_mask"].astype(np.uint8)
-        fallback_reason = "projected_ratio_guard"
+        fallback_reason = "quality_gate_ratio_guard_fallback_to_homography"
     else:
         pred_mask = depth_result["pred_mask"].astype(np.uint8)
-        warped_source = homography_result["warped_source"]
-        valid_mask = homography_result["valid_mask"].astype(np.uint8)
+        warped_source = depth_result["warped_source"]
+        valid_mask = depth_result["valid_mask"].astype(np.uint8)
         fallback_reason = ""
 
     tuned = apply_scene_tuning(
@@ -522,11 +529,19 @@ def compute_m7_scene_result(config: dict[str, Any], row: Any, stereo: dict[str, 
         },
         assets["target_image"],
         "thermal",
-        coarse_radius_px=10,
-        coarse_step_px=4,
-        fine_radius_px=2,
-        fine_step_px=1,
-        coarse_scales=[0.97, 0.99, 1.0, 1.01, 1.03],
+        **scene_tune_kwargs(
+            method_cfg,
+            defaults={
+                "coarse_radius_px": 10,
+                "coarse_step_px": 4,
+                "fine_radius_px": 2,
+                "fine_step_px": 1,
+                "coarse_scales": [0.97, 0.99, 1.0, 1.01, 1.03],
+                "coarse_angles_deg": [-1.0, 0.0, 1.0],
+                "fine_scale_delta": 0.01,
+                "fine_angle_delta_deg": 0.5,
+            },
+        ),
     )
 
     snapped_mask, snap_info = boundary_snap_refine(tuned["pred_mask"], assets["target_image"], int(method_cfg.get("band_width_px", 7)))
@@ -549,7 +564,9 @@ def compute_m7_scene_result(config: dict[str, Any], row: Any, stereo: dict[str, 
         "global_pose_delta": dict((cache_payload or {}).get("global_pose_delta", {})),
         "self_supervised_score_before": float((cache_payload or {}).get("score_before", 0.0)),
         "self_supervised_score_after": float((cache_payload or {}).get("score_after", 0.0)),
-        "projected_ratio": projected_ratio,
+        "projected_ratio": raw_projected_ratio,
+        "filled_projected_ratio": filled_projected_ratio,
+        "quality_gate_ratio": quality_gate_ratio,
         "hole_fill_ratio": float(depth_result["hole_fill_mask"].sum()) / max(float(depth_result["support_mask"].sum()), 1.0),
         "band_refine_changed_px": int(np.count_nonzero(final_mask != tuned["pred_mask"])),
         "fallback_reason": fallback_reason,

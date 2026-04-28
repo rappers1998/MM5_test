@@ -1,0 +1,18 @@
+{
+  "method_name": "M0_MM5_OFFICIAL",
+  "track": "UV",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 277.3185764738351,
+  "checkerboard_corner_rmse_px": 277.8953154750381,
+  "keypoint_transfer_error_px": 203.96921094258627,
+  "overall_region_error_px": 211.74862581888834,
+  "normalized_overall_region_error": 0.22964985742276814,
+  "ntg": 0.0799136359974382,
+  "mutual_information": 0.12649424737888987,
+  "valid_warp_coverage": 0.9212879372427984,
+  "mean_iou": 0.11937324761442795,
+  "freq_iou": 0.8592575105066125,
+  "pixel_accuracy": 0.9064393381570324,
+  "mean_pixel_accuracy": 0.13295294784246123,
+  "boundary_f1": 0.006409928387406957
+}

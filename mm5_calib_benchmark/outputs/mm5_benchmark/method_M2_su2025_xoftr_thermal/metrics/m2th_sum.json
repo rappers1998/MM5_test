@@ -1,0 +1,18 @@
+{
+  "method_name": "M2_SU2025_XOFTR_FALLBACK",
+  "track": "THERMAL",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 1.3286217044372537,
+  "checkerboard_corner_rmse_px": 1.4425983132199671,
+  "keypoint_transfer_error_px": 16.700309213002523,
+  "overall_region_error_px": 11.709140039980412,
+  "normalized_overall_region_error": 0.014286409754095657,
+  "ntg": 0.2067086626497981,
+  "mutual_information": 0.2954037327195336,
+  "valid_warp_coverage": 0.9480799357096354,
+  "mean_iou": 0.2657117356412486,
+  "freq_iou": 0.9445742485634484,
+  "pixel_accuracy": 0.96428574877374,
+  "mean_pixel_accuracy": 0.351355626052938,
+  "boundary_f1": 0.22765631692537702
+}

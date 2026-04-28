@@ -1,0 +1,434 @@
+# Progress Log
+
+## 2026-04-24
+- Removed old method1-method5 source/config text files with `apply_patch`.
+- Recursive deletion of old root `src/`, `configs/`, and `outputs/` timed out twice in permission review, so old binary outputs remain on disk.
+- Re-selected images from `index_with_splits.csv` using raw RGB1 brightness instead of the previous RGB3-oriented manifest path.
+- Confirmed the darkest test/val synchronized samples are aligned IDs `106`, `104`, and `103`.
+- Created `darklight_mm5/run_darklight.py`.
+- Ran:
+  - `python -m py_compile .\darklight_mm5\run_darklight.py`
+  - `python .\darklight_mm5\run_darklight.py --limit 3 --splits test,val`
+- Generated per-sequence four-panel review images under `darklight_mm5/outputs/quads/`.
+- Generated official same-modality calibration checks and LWIR edge/difference checks under `darklight_mm5/outputs/edge_reviews/`.
+- Reviewed the generated images. The new dark-light results are much cleaner and the RGB1/LWIR timing is now correct, though background thermal edges remain noisy.
+- Added per-stage registration metrics, fusion metrics, and summary JSON files.
+- Added `darklight_mm5/README.md` explaining raw inputs, official-reference use, output folders, and metric meanings.
+- Re-ran `python .\darklight_mm5\run_darklight.py --limit 3 --splits test,val` successfully after the metric update.
+- Added `darklight_mm5/make_acceptance_report.py`.
+- Generated `darklight_mm5/outputs/reports/dl_ref_mm5_darklight_cal_fusion_acc_report.docx`.
+- Verified the Word package contains 12 embedded images, 6 tables, 48 paragraphs, and 12 inline shapes.
+- Added `raw_rgb3_path` loading as a bright visible-light RAW reference image.
+- Generated five-panel visualizations under `darklight_mm5/outputs/five_panels/` while keeping calibration based on synchronized `raw_rgb1_path + raw_thermal16_path`.
+- Started calibration-depth version requested by the user.
+- Verified dark samples have RGB1 `720x1280`, LWIR `512x640`, and depth `720x1280`.
+- Verified OpenCV YAML `D1/D2/T` are sequence nodes and need sequence parsing rather than direct `.mat()`.
+- First `calibration_depth` run failed at YAML sequence parsing; patched parser to check `isSeq()` before calling `.mat()`.
+- Re-ran `python .\darklight_mm5\run_darklight.py --strategy calibration_depth --output .\darklight_mm5\outputs_calibration_depth --limit 3 --splits test,val` successfully.
+- Generated calibration-depth five-panel outputs for aligned IDs `106`, `104`, and `103`.
+- Updated `darklight_mm5/README.md` with the `official_reference` and `calibration_depth` strategy distinction.
+
+## 2026-04-26
+- Started folder cleanup pass requested by user.
+- Restored existing planning context from `task_plan.md`, `findings.md`, and `progress.md`.
+- Observed prior cleanup left old binary output directories because recursive deletion previously timed out.
+- Ran `git diff --stat`; current working tree has many generated image/output changes under `mm5_calib_benchmark`, making generated outputs the main cleanup candidate.
+- Ran top-level size and file-type inventory; the largest cleanup targets are `mm5_ivf`, `mm5_calib_benchmark/outputs`, root `outputs`, and generated PNG-heavy folders.
+- Classified first-pass cleanup targets: root `outputs`, `mm5_ivf/outputs`, root `src` residue, empty `configs`/`docs`/`review_tmp`, and Python cache directories.
+- Classified keep/confirm targets: `mm5_ivf/data` raw/data files, `darklight_mm5` current results, `runs` and `mar_scholar_compare` tracked reports, and tracked `mm5_calib_benchmark/outputs`.
+- Deleted first-pass targets after resolving and validating paths under the workspace. Reclaimed about `507 MB` from root `outputs` and `mm5_ivf/outputs`, plus cache/empty directory cleanup.
+- Checked references to `mm5_ivf/data/processed`; only `mm5_ivf` configs point to it, and the current dark-light workflow does not depend on it.
+- Deleted `mm5_ivf/data/processed` and empty parent `mm5_ivf/data`, reclaiming about `2312 MB` and removing most remaining unused generated images.
+- Final scan shows root `outputs`, `mm5_ivf/outputs`, root `src`, and `mm5_ivf/data` are gone; `darklight_mm5/outputs` and `darklight_mm5/outputs_calibration_depth` remain.
+- Final image count is about `2821`, down from about `9093`.
+- Marked cleanup phase complete while leaving tracked `mm5_calib_benchmark/outputs` as a deliberate second-pass candidate.
+- Started calibration/depth optimization design pass using brainstorming, karpathy-guidelines, and planning-with-files.
+- Restored plan/findings/progress and inspected `darklight_mm5/run_darklight.py` plus README. Current optimization target is `calibration_depth`; current best reference remains `official_reference`.
+- Compared `official_reference` and `calibration_depth` metrics. Calibration-depth has very low edge distances but weak/negative NCC and two boundary residual shifts, pointing to intrinsic scaling/offset before any visual fusion tuning.
+- Wrote design record `docs/superpowers/specs/2026-04-26-calibration-depth-tuning-design.md`.
+- Added explicit calibration adjustment hooks to `darklight_mm5/run_darklight.py`: calibration image size scaling, LWIR principal-point offset, T scale/offset, and CLI flags while preserving old defaults.
+- Added offline search script `darklight_mm5/tune_calibration_depth.py` to score candidate calibration-depth parameters against raw alignment metrics and the current official-reference output as an offline target.
+- `python .\darklight_mm5\tune_calibration_depth.py ...` broad grid timed out after 10 minutes before writing outputs. Next attempt will use a smaller hypothesis grid instead of repeating the broad search.
+- Added `--eval-scale` to the tuning script to do coarse search on downsampled images/depth.
+- Ran size-probe search for `raw`, `1280x720`, and `1280x1024` LWIR calibration sizes. `1280x1024` is the clear best direction, improving reprojection coverage and NCC.
+- Ran depth/T search around `1280x1024`; best coarse direction was `depth_scale=0.85`, `t_scale=1.15`.
+- Ran LWIR principal-point offset search. Rejected low-overlap candidates and selected high-coverage offset `48,24`.
+- Re-ran full-size tuned output to `darklight_mm5/outputs_calibration_tuned` with selected parameters and wrote `darklight_mm5/tuned_calibration_depth_config.json`.
+- Added `darklight_mm5/outputs_calibration_tuned/comparison_summary.json` with before/after metrics.
+- Verified syntax with `python -m py_compile .\darklight_mm5\run_darklight.py .\darklight_mm5\tune_calibration_depth.py`.
+- Verified final tuned output has per-sample files, quads, five-panels, edge reviews, and metrics. Removed intermediate full-size candidate output folders after recording comparison metrics.
+- User reported the tuned alignment is visually poor. Started a diagnosis pass treating visual alignment as primary success criterion.
+- Full-resolution brute-force shift search against `official_reference` timed out; next diagnostic uses low-resolution correlation to avoid repeating the failure.
+- Low-resolution diagnostics showed the tuned depth-remap output needs inconsistent residual shifts against the current best reference, so the failure is not a simple global offset.
+- Added `darklight_mm5/run_calibration_plane.py` using a calibrated RGB-to-LWIR scene-plane homography and inverse LWIR-to-RGB warp.
+- Ran initial calibration-plane output successfully, then compared it against `calibration_depth`, `outputs_calibration_tuned`, and `official_reference`.
+- Initial plane output improved mean target NCC to about `0.226`, better than tuned depth-remap target NCC `0.074`.
+- Full-resolution broad fine-grid search timed out; switched to a smaller local full-resolution search and a lightweight prefilter for broader exploration.
+- Selected final balanced plane parameters: `lwir_calib_size=1280x720`, `plane_depth_mm=350`, `t_scale=1.45`, `lwir_principal_offset=20,0`, `max_residual_shift=0`.
+- Re-ran final output to `darklight_mm5/outputs_calibration_plane`.
+- Wrote `darklight_mm5/calibration_plane_config.json`.
+- Updated `darklight_mm5/README.md` with the recommended `calibration_plane` strategy and command.
+- Wrote comparison summaries to `darklight_mm5/outputs_calibration_plane/comparison_summary.json` and `darklight_mm5/calibration_plane_comparison_summary.json`.
+- Generated visual comparison panels under `darklight_mm5/outputs_calibration_plane/comparison_panels/`.
+- Removed temporary search output directories `outputs_calibration_plane_best` and `outputs_calibration_plane_target_ncc`.
+- Verified syntax with `python -m py_compile .\darklight_mm5\run_darklight.py .\darklight_mm5\tune_calibration_depth.py .\darklight_mm5\run_calibration_plane.py`.
+- Validated `darklight_mm5/calibration_plane_config.json` and `darklight_mm5/outputs_calibration_plane/comparison_summary.json` with `python -m json.tool`.
+- Removed the `darklight_mm5/__pycache__` directory created by syntax checking.
+- User requested deleting all rejected previous algorithm artifacts and evaluating the current version.
+- Deleted `darklight_mm5/outputs_calibration_depth`, `darklight_mm5/outputs_calibration_tuned`, `darklight_mm5/tuning`, `darklight_mm5/tune_calibration_depth.py`, `darklight_mm5/tuned_calibration_depth_config.json`, old comparison summaries, and old comparison panels.
+- Rewrote `darklight_mm5/README.md` so it documents only the current `calibration_plane` workflow.
+- Removed the rejected depth path from the public `run_darklight.py` CLI and deleted the associated depth projection/sample-processing functions.
+- Generated current-version-only evaluation files:
+  - `darklight_mm5/outputs_calibration_plane/dl_plane_eval_sum.json`
+  - `darklight_mm5/outputs_calibration_plane/dl_plane_eval_ref.csv`
+  - `darklight_mm5/outputs_calibration_plane/reports/dl_plane_eval_report.md`
+  - `darklight_mm5/outputs_calibration_plane/evaluation_panels/*_evaluation_panel.png`
+- Verified `run_darklight.py` and `run_calibration_plane.py` compile after cleanup.
+- Confirmed deleted paths no longer exist and active `darklight_mm5` contains only current outputs/scripts/config plus the retained official-reference evaluation output.
+- Final verification found no active `darklight_mm5` references to the rejected depth/tuning artifacts, confirmed `run_calibration_plane.py --help` works, validated `calibration_plane_config.json`, read `evaluation_against_reference.csv`, and removed the resulting `__pycache__`.
+- Started next optimization design pass using brainstorming, karpathy-guidelines, and planning-with-files.
+- Reviewed current metrics and code paths. Current bottleneck is local residual misalignment after the global plane homography, not valid-area coverage.
+- Reviewed `104_seq386` evaluation and five-panel images. The visual issue is mostly local geometry/edge mismatch, while fusion is clean but conservative.
+- Read current `run_calibration_plane.py`, `run_darklight.py`, config, summary, per-sample metrics, registration metrics, and fusion metrics.
+- Planning catchup script path under `.claude/skills` was missing, so continued from the project planning files.
+- Marked phase 15 in progress and recorded next-pass guardrails: keep plane homography baseline, tune calibration and fusion separately, and use official-reference outputs only for offline evaluation.
+- Added a detailed phase 15 strategy to `task_plan.md` for boundary diagnostics, constrained plane-parameter search, residual boundary refinement, fusion alpha tuning, and final selection.
+- Added fusion parameter hooks to `make_fusion()` and `run_calibration_plane.py`, and added `darklight_mm5/optimize_calibration_plane.py` for boundary diagnostics, constrained plane search, residual refinement, optimized output generation, and evaluation files.
+- Corrected `optimize_calibration_plane.py` target evaluation to match the existing `evaluation_summary.json` convention: reference LWIR vs candidate LWIR over the full valid mask, without annotation/ref-positive target masking.
+- Targeted local optimization rerun initially failed because PowerShell/argparse parsed negative `--offset-ys -4,0,4` as an option; retry uses `--offset-ys=-4,0,4`.
+- Ran the corrected quick search and targeted local search. Selected optimized candidate `plane_depth_mm=325`, `t_scale=1.45`, `lwir_principal_offset=14,0`, `max_residual_shift=2`.
+- Generated optimized outputs under `darklight_mm5/outputs_calibration_plane_opt` and boundary diagnostics under `darklight_mm5/outputs_calibration_plane_boundary`.
+- Updated `calibration_plane_config.json` and `README.md` to document the optimized parameters and reproduction commands.
+- Final verification passed: `run_darklight.py`, `run_calibration_plane.py`, and `optimize_calibration_plane.py` compile; optimized summary JSON validates; baseline and optimized boundary CSVs plus candidate tables are present. Marked phase 15 complete.
+- Started a new cleanup pass for redundant poor-result generated images/documents.
+- Built and validated a deletion candidate set of 2746 files, about 442 MB, all under the workspace. The set preserves current optimized output, official-reference output, source/config files, planning files, and `mm5_calib_benchmark/outputs/mm5_benchmark/splits`.
+- Two deletion attempts timed out in permission review before files were removed. No candidate files were deleted yet.
+- User approved approach C for approaching official-aligned precision: teacher-guided residual correction plus constrained RAW-only refinement.
+- Wrote design doc `docs/superpowers/specs/2026-04-27-teacher-guided-residual-alignment-design.md`.
+- Updated `task_plan.md` with phases 17 and 18, marked cleanup phase 16 as blocked, and recorded the first-stage/stretched acceptance targets.
+- Updated `findings.md` with the approved route and main technical assumptions.
+- Created isolated method folder `darklight_mm5/teacher_residual_method` with `run_teacher_residual.py` and README.
+- First run of `run_teacher_residual.py` timed out after 360 seconds before writing CSV/summary outputs. Diagnosed the dense teacher-shift search as the likely bottleneck and changed it to coarse-to-fine search.
+- Implemented teacher residual diagnostics, global smooth-flow residual correction, RAW-only bounded refinement, and sample-flow upper-bound output.
+- Re-ran `python .\darklight_mm5\teacher_residual_method\run_teacher_residual.py --aligned-ids 106,104,103 --teacher-shift-search 12 --teacher-shift-step 4` successfully.
+- Current reusable global-flow result: mean `target_ncc=0.3074`, `target_edge_distance=4.8485 px`, `valid_ratio=0.8143`.
+- Current sample-flow upper bound: mean `target_ncc=0.3670`, `target_edge_distance=4.4121 px`, `valid_ratio=0.8130`.
+- Added `reports/teacher_residual_report.md`, `teacher_residual_config.json`, `teacher_residual_global_flow.npy`, and `teacher_residual_sample_flows.npz` under the isolated method folder.
+- User rejected any aligned/teacher dependence for the final route: generation must be based only on calibration data and raw inputs.
+- Marked the teacher-residual work as diagnostic only and started phase 19 for a separate `darklight_mm5/calibration_only_method` implementation.
+- Confirmed image dimensions for the selected dark samples: raw RGB1 `1280x720`, raw LWIR `640x512`, MM5 aligned RGB1/T16 `640x480`.
+- Added `darklight_mm5/calibration_only_method/run_calibration_only.py` and README.
+- First calibration-only run tested raw crops, calibration-plane crops, and stored YAML rectification. Best candidate was `yaml_rectify_1280x720_center` with mean LWIR NCC `0.3926`.
+- Added `def_thermalcam_ori.yml` as a raw LWIR camera intrinsic source after confirming it better matches the `640x512` raw thermal input. Best LWIR NCC improved to `0.5131`.
+- Added calibration-derived `getOptimalNewCameraMatrix` crop modes. Best LWIR NCC improved to `0.6616`.
+- Added hybrid output generation: RGB uses calibration-derived raw crop, LWIR uses stored YAML rectification with raw thermal intrinsics. Best candidate is `hybrid_raw_rgb_lwir_rectify_thermal_ori_rgb_optimal_alpha0_0` with mean LWIR NCC `0.6616` and mean RGB NCC `0.6586` against MM5 aligned evaluation references.
+- Verified `python -m py_compile .\darklight_mm5\calibration_only_method\run_calibration_only.py`.
+- Ran `python .\darklight_mm5\calibration_only_method\run_calibration_only.py --aligned-ids 106,104,103 --save-top 8` successfully.
+- Validated `darklight_mm5/calibration_only_method/outputs/metrics/candidate_summary.json` with `python -m json.tool`.
+- Diagnostic-only aligned template search on the full rectified LWIR canvas found crop offsets near `(277-279,111-112)` can reach about `0.89` full-image NCC, but this is not allowed for generation because it uses aligned T16 to choose the crop.
+- Error logged: a Python loop grid search for RGB crop timed out after 120 seconds; replaced with `cv2.matchTemplate`.
+- Error logged: direct `node.mat()` on sequence-style `D` in `def_thermalcam_ori.yml` failed; fixed local YAML reader to handle sequence nodes first.
+- Error logged: calibration-board cross-modal template matching produced low/unstable scores and did not recover the MM5 aligned crop convention.
+- Re-reviewed the aligned-level target. Confirmed MM5 aligned RGB1 is exactly reproducible by raw RGB1 crops `(295,103)`, `(297,103)`, `(298,103)` for aligned IDs `103,104,106`, respectively, but those offsets are aligned-derived diagnostics and cannot be used directly.
+- Re-ran LWIR full-rectified diagnostic using `def_thermalcam_ori.yml` plus YAML `R2/P2`; best aligned-derived crops are `(277,111)`, `(279,112)`, `(278,112)`. They reach full-image NCC `0.887-0.894`, but direct edge/content NCC remains below the retained bridge.
+- Reviewed `mm5_calib_benchmark.methods.m0_mm5_official.run`: the benchmark's M0 official path applies `apply_scene_tuning` after the calibration homography, using target image/mask information. This is not equivalent to the user's strict calibration-only rule.
+- Review conclusion: to reach MM5/original aligned level without aligned inputs, the remaining work is to recover the MM5 aligned canvas/crop/projective convention from calibration metadata/captures. If that convention is not present in the calibration files, the requested `0.91+` aligned NCC target is probably not attainable under the strict constraint.
+- Started Phase 20 as an isolated diagnostic pass. The new script will enumerate calibration-derived canvas/crop rules and report aligned-derived oracle offsets separately as evaluation-only evidence, not generation parameters.
+- Added `darklight_mm5/calibration_only_method/diagnose_aligned_canvas.py`.
+- Ran `python .\darklight_mm5\calibration_only_method\diagnose_aligned_canvas.py --aligned-ids 106,104,103 --save-top 5` successfully.
+- Phase 20 output is under `darklight_mm5/calibration_only_method/outputs_phase20_canvas`.
+- Best allowed calibration-derived rule remains `shared_rgb_optimal_alpha0_0` with `thermal_ori`: mean LWIR NCC `0.6616`, mean RGB NCC `0.6586`.
+- Oracle-only aligned template offsets confirm RGB `(295,103)`, `(297,103)`, `(298,103)` and thermal-ori LWIR `(277,111)`, `(279,112)`, `(278,112)`, but these are not allowed for generation.
+- Added and ran a pure `cv2.stereoRectify` alpha/new-size probe. P1/P2 principal offsets range x `369..414`, y `129..155`, so OpenCV rectification metadata alone does not recover the MM5 aligned crop convention.
+- Verified `python -m py_compile .\darklight_mm5\calibration_only_method\diagnose_aligned_canvas.py`.
+- Verified `python -m json.tool .\darklight_mm5\calibration_only_method\outputs_phase20_canvas\metrics\canvas_candidate_summary.json`.
+- Marked Phase 20 complete and added Phase 21 as the remaining decision/search step for missing MM5 aligned-generation metadata or a formal strict-calibration ceiling.
+- Started Phase 21 optimization. Scope: search for missing aligned-generation metadata/code/captures, then add only calibration-derived separated RGB/LWIR canvas candidates if useful. Aligned images remain evaluation-only.
+- Confirmed original calibration root from MM5 index exists at `D:\a三模数据\MM5_CALIBRATION\MM5_CALIBRATION`.
+- Found `capture_THERM/1280x720` checkerboard capture groups at `0.30m`, `0.50m`, `0.70m`, `0.90m`, and `mixed`.
+- Existing `mm5_calib_benchmark.methods.board.load_board_observations()` detected zero pairs with its default preprocessing, so a robust probe with classic chessboard fallback was used.
+- Calibration-board homography probe found 21 low-RMSE per-capture homographies, but the best eval mean LWIR NCC was only `0.3375`, below the current rectified baseline `0.6616`.
+- LWIR-only raw/resize/thermal-undistort probe also stayed below the current rectified baseline; best tested family was below about `0.46` mean NCC.
+- Added `darklight_mm5/calibration_only_method/run_phase21_canvas_optimization.py`.
+- Ran `python .\darklight_mm5\calibration_only_method\run_phase21_canvas_optimization.py --aligned-ids 106,104,103` successfully.
+- Phase 21 output is under `darklight_mm5/calibration_only_method/outputs_phase21_canvas`.
+- Best Phase 21 candidate is `phase21_sep_rgb_intersection_lwir_alpha0`: RGB NCC mean `0.9865`, LWIR NCC mean `0.6616`, cross RGB/LWIR NCC mean `-0.1944`.
+- Verified syntax with `python -m py_compile .\darklight_mm5\calibration_only_method\run_phase21_canvas_optimization.py`.
+- Validated `darklight_mm5/calibration_only_method/outputs_phase21_canvas/metrics/phase21_canvas_summary.json`.
+- Marked Phase 21 complete and added Phase 22 as the decision point: keep strict calibration-only ceiling or permit a raw-content refinement path that still does not use MM5 aligned/teacher inputs.
+- User requested the next optimization pass under the same strict calibration-only constraint.
+- Converted Phase 22 into a final calibration-board stereo recalibration probe instead of relaxing the constraint.
+- Added `darklight_mm5/calibration_only_method/run_phase22_stereo_recalib.py`.
+- First prototype showed EPNP/stereo pose estimates have good board reprojection but do not beat the Phase 21 LWIR rectification baseline.
+- Ran `python -m py_compile .\darklight_mm5\calibration_only_method\run_phase22_stereo_recalib.py` successfully.
+- Ran `python .\darklight_mm5\calibration_only_method\run_phase22_stereo_recalib.py --aligned-ids 106,104,103` successfully.
+- Phase 22 output is under `darklight_mm5/calibration_only_method/outputs_phase22_stereo_recalib`.
+- The script accepted 27 checkerboard pose observations and evaluated 412 EPNP/stereoRectify candidates.
+- Best re-estimated stereo candidate is `epnp_0_70m_640x512_a0_5_free_principal_p2_principal`: LWIR NCC mean `0.6014`, min `0.5157`.
+- Current best overall remains `phase21_ceiling_current`: RGB NCC mean `0.9865`, LWIR NCC mean `0.6616`, min `0.6087`.
+- Validated `darklight_mm5/calibration_only_method/outputs_phase22_stereo_recalib/metrics/phase22_stereo_recalib_summary.json`.
+- Marked Phase 22 complete and recorded the stereo-recalibration path as exhausted with currently available calibration files/captures.
+- User asked to preserve the current RGB and continue optimizing LWIR NCC toward the original aligned level.
+- Started Phase 23: fixed the Phase 21 RGB canvas and changed only the LWIR crop offset using rectified checkerboard-corner geometry from calibration captures.
+- A quick prototype found a calibration-only board-derived offset near `(280,115)` can improve LWIR NCC from `0.6616` to about `0.81`.
+- Added `darklight_mm5/calibration_only_method/run_phase23_lwir_board_offset.py`.
+- Ran `python -m py_compile .\darklight_mm5\calibration_only_method\run_phase23_lwir_board_offset.py` successfully.
+- Ran `python .\darklight_mm5\calibration_only_method\run_phase23_lwir_board_offset.py --aligned-ids 106,104,103` successfully.
+- Phase 23 output is under `darklight_mm5/calibration_only_method/outputs_phase23_lwir_board_offset`.
+- The script accepted 21 checkerboard offset observations and evaluated calibration-derived LWIR crop offsets while keeping RGB fixed.
+- Best/promoted strict candidate is `board_all_median_floor` with LWIR offset `(280,115)`.
+- RGB NCC mean/min remains `0.9865 / 0.9724`.
+- LWIR NCC mean/min improves from `0.6616 / 0.6087` to `0.8101 / 0.7695`.
+- Validated `darklight_mm5/calibration_only_method/outputs_phase23_lwir_board_offset/metrics/phase23_lwir_board_offset_summary.json`.
+- Visually spot-checked `103_seq385_board_all_median_floor.png`; generated LWIR is closer to the MM5 T16 evaluation image while RGB remains fixed.
+- Marked Phase 23 complete. The remaining gap to the retained bridge target `0.9233 / 0.9064` likely requires a calibration-derived post-rectification affine/projective residual correction, not another RGB/crop change.
+- Started Phase 24 to fit a global LWIR residual transform from calibration-board correspondences while preserving the Phase 21 RGB canvas and Phase 23 LWIR crop.
+- Prototype showed board-derived residual transforms can improve LWIR NCC substantially:
+  - `affine_lmeds`: mean/min `0.9182 / 0.9118`
+  - retained bridge target: mean/min `0.9233 / 0.9064`
+- Added `darklight_mm5/calibration_only_method/run_phase24_lwir_board_affine.py`.
+- Ran `python -m py_compile .\darklight_mm5\calibration_only_method\run_phase24_lwir_board_affine.py` successfully.
+- Ran `python .\darklight_mm5\calibration_only_method\run_phase24_lwir_board_affine.py --aligned-ids 106,104,103` successfully.
+- Phase 24 output is under `darklight_mm5/calibration_only_method/outputs_phase24_lwir_board_affine`.
+- The script used 1848 checkerboard correspondence points from original calibration captures.
+- Promoted candidate is `affine_lmeds`, selected by lowest checkerboard board RMSE `7.8255 px`.
+- RGB NCC mean/min remains `0.9865 / 0.9724`.
+- LWIR NCC mean/min improves to `0.9182 / 0.9118`, reaching the retained bridge minimum and coming within about `0.0051` of the retained bridge mean.
+- Validated `darklight_mm5/calibration_only_method/outputs_phase24_lwir_board_affine/metrics/phase24_lwir_board_affine_summary.json`.
+- Visually spot-checked `103_seq385_affine_lmeds.png`; RGB stays fixed and LWIR geometry is close to the MM5 T16 eval image, with expected affine border regions.
+- Marked Phase 24 complete.
+- User clarified that Phase 25 should use a true depth-assisted registration method, not only depth fill/diagnostics.
+- Added `darklight_mm5/calibration_only_method/run_phase25_depth_assisted.py`.
+- Ran `python -m py_compile .\darklight_mm5\calibration_only_method\run_phase25_depth_assisted.py` successfully.
+- Ran `python .\darklight_mm5\calibration_only_method\run_phase25_depth_assisted.py --aligned-ids 106,104,103` successfully.
+- Phase 25 output is under `darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted`.
+- Phase 25 keeps the Phase 21 RGB canvas, Phase 23 LWIR crop `(280,115)`, and Phase 24 `affine_lmeds` board transform as the starting point.
+- Implemented depth-assisted registration:
+  - raw depth is cropped to the fixed RGB canvas;
+  - a foreground boundary is extracted with `depth < 1000 mm`;
+  - a shared residual LWIR translation is selected by minimizing depth-boundary distance to generated LWIR edges over the three samples.
+- The selected depth-driven residual translation is `dx=-2 px`, `dy=+2 px`, with depth-boundary score improving from `23.5025` to `22.3373`.
+- Pure dense depth projection alone reaches only LWIR NCC mean/min `0.7638 / 0.7441`, so it is kept as a diagnostic rather than the promoted method.
+- Depth-registered Phase25 without fill reaches LWIR NCC mean/min `0.9237 / 0.9174`.
+- Promoted Phase25 candidate `phase25_depth_registered_global_shift_depth_fill` reaches LWIR NCC mean/min `0.9321 / 0.9261` and RGB NCC mean/min `0.9865 / 0.9724`.
+- Phase 25 exceeds the retained bridge target `0.9233 / 0.9064` on the three selected samples while keeping MM5 aligned images evaluation-only.
+- Re-ran `python .\darklight_mm5\calibration_only_method\run_phase24_lwir_board_affine.py --aligned-ids 106,104,103` after Phase 25; Phase 24 baseline remains `0.9182 / 0.9118`.
+- Validated Phase 24 and Phase 25 summary JSON files with `python -m json.tool`.
+- User requested cleanup of lower-quality old phases, README update, and GitHub sync.
+- Recursive local deletion of old output folders was requested twice but the permission approval review timed out; instead, `.gitignore` was updated so old low-score Phase outputs and old teacher/calibration-plane outputs are excluded from GitHub sync.
+- Updated `darklight_mm5/calibration_only_method/README.md` to document the latest Phase25 depth-assisted registration scheme, command, constraints, and metrics.
+- User manually deleted the old calibration-only output directories, leaving only `outputs_phase25_depth_assisted` and `__pycache__` under `darklight_mm5/calibration_only_method`.
+- Rewrote the root `README.md` as a full project overview:
+  - starts with project purpose and current Phase25 result;
+  - explains the strict generation/evaluation boundary;
+  - documents Phase25 commands, metrics, and links;
+  - describes each top-level folder in logical order;
+  - adds GitHub sync guidance that avoids staging unrelated benchmark outputs.
+
+## 2026-04-28
+- Started Phase 26 for the user's new idea: replace dense depth-image assisted registration with near-infrared single-point laser rangefinder assisted registration.
+- Restored planning context from `task_plan.md`, `findings.md`, and `progress.md`.
+- Confirmed current latest promoted method is Phase25 depth-assisted registration:
+  - RGB NCC mean/min `0.9865 / 0.9724`;
+  - LWIR NCC mean/min `0.9321 / 0.9261`;
+  - retained bridge target `0.9233 / 0.9064`;
+  - generation remains calibration/raw-input based, with MM5 aligned images evaluation-only.
+- Updated `task_plan.md` with Phase 25 complete and Phase 26 in progress.
+- Reviewed Phase25 script, README, and summary JSON.
+- Confirmed Phase25 depth usage has two parts:
+  - dense RGB-depth-to-LWIR projection is a diagnostic/fill source and is not strong enough alone;
+  - the promoted registration gain comes from selecting a global LWIR residual translation using raw depth foreground-boundary distance to generated LWIR edges.
+- User clarified the final target is FPGA real-time multimodal image registration and fusion.
+- Inspected `peizhun_jiguang`; the directory exists and is currently empty.
+- Recorded that Phase26 should produce an FPGA-oriented package under `peizhun_jiguang` after the design is approved, not another Python/OpenCV-only offline method.
+- Searched the workspace for HLS/RTL/Vitis-style files and found no existing hardware implementation framework to reuse.
+- User requested: first make a plan, then execute it, using the best Phase25 result while adapting to FPGA real-time registration/fusion.
+- Added "Phase 26 FPGA Laser-Rangefinder Registration Plan" to `task_plan.md`.
+- Created Phase26 package under `peizhun_jiguang/`:
+  - `README.md`
+  - `docs/fpga_strategy.md`
+  - `docs/rangefinder_protocol.md`
+  - `docs/verification_plan.md`
+  - `config/laser_registration_params.json`
+  - `scripts/export_laser_lut.py`
+  - `hls/README.md`
+  - `hls/laser_fusion.hpp`
+  - `hls/laser_fusion.cpp`
+- Generated LUT outputs under `peizhun_jiguang/generated/`:
+  - `laser_lut.json`
+  - `laser_lut.csv`
+  - `laser_lut.h`
+- Verified:
+  - `python -m json.tool .\peizhun_jiguang\config\laser_registration_params.json`
+  - `python -m py_compile .\peizhun_jiguang\scripts\export_laser_lut.py`
+  - `python .\peizhun_jiguang\scripts\export_laser_lut.py --config .\peizhun_jiguang\config\laser_registration_params.json --output-dir .\peizhun_jiguang\generated`
+- `vitis_hls` was not found locally, so HLS synthesis/syntax validation remains for a Vitis environment.
+- Attempted to remove `peizhun_jiguang/scripts/__pycache__` created by validation, but permission review timed out; left it in place.
+- User confirmed HLS is installed and asked to search carefully/save the memory.
+- Rechecked PATH, environment variables, common Xilinx paths, top-level drive folders, and Start Menu shortcuts.
+- Found HLS installs:
+  - Vitis HLS 2022.1: `F:\Vivado\vivado2022.1\Vitis_HLS\2022.1\bin\vitis_hls.bat`
+  - Vitis HLS 2022.1 command prompt: `F:\Vivado\vivado2022.1\Vitis_HLS\2022.1\bin\vitis_hls_cmd.bat`
+  - Vivado HLS 2018.3: `E:\vivado2018.3\vivado2018.3\Vivado\2018.3\bin\vivado_hls.bat`
+- Confirmed current `vitis_hls` is not on PATH; the `Vitis_HLS 2022.2` shortcut points to missing `E:\vivado1\Vitis_HLS\2022.2\bin\vitis_hls.bat`.
+- Running `vitis_hls.bat -version` from this shell starts the wrapper but hits Xilinx `tee.exe` Win32 error 5, so use the Vitis HLS command prompt shortcut or full path from a normal user shell for actual synthesis validation.
+- Continued to Phase 27 after the user asked to keep going.
+- Added an HLS C-simulation harness plan:
+  - verify DA1501A Protocol 1 parser on a known 12.3 m return frame;
+  - verify bad checksum rejection;
+  - verify range-bin selection uses the Phase25 residual seed when range is valid;
+  - verify invalid range falls back to the Phase24 board-affine baseline;
+  - verify deterministic sample pixels after full-frame warp/fusion.
+- Added Phase27 files:
+  - `peizhun_jiguang/hls/tb_laser_fusion.cpp`
+  - `peizhun_jiguang/hls/run_hls.tcl`
+  - `peizhun_jiguang/hls/run_vitis_hls.ps1`
+- Lightweight checks passed:
+  - Vitis HLS loader path exists at `F:\Vivado\vivado2022.1\Vitis_HLS\2022.1\bin\loader.bat`;
+  - `run_vitis_hls.ps1` parses without PowerShell syntax errors.
+- First Vitis HLS C-sim launch reached Vitis HLS 2022.1 successfully through `loader.bat -exec vitis_hls`, but failed because `open_project` rejected an absolute Windows path containing `:` and `/`.
+- Patched `run_hls.tcl` to `cd` into the HLS directory and open the relative project name `laser_fusion_prj`.
+- Second Vitis HLS C-sim launch created the project and added source/testbench files, but failed at `set_part xc7z020clg400-1` because this environment reports the part/device library is not installed (`/parts/arch.xml` missing).
+- Patched `run_hls.tcl` to be C-simulation only by removing `set_part` and `create_clock`; board-specific part/clock will be added later in a synthesis Tcl after the actual FPGA device is confirmed.
+- Third Vitis HLS C-sim launch reached `csim_design`, but bundled MSYS `sh.exe/cat.exe` failed with Win32 error 5 before the generated make flow could compile the code.
+- A non-sandbox rerun was requested to test whether that MSYS failure is sandbox-related, but the approval review timed out.
+- Direct `sim.bat` also hit the wrapper `tee.exe` Win32 error 5 path.
+- Manual code-level compilation with the Vitis-bundled GCC 6.2 failed inside HLS `ap_int.h` includes with an internal compiler segmentation fault.
+- Manual code-level compilation with Vitis-bundled clang succeeded, and running `peizhun_jiguang/hls/manual_build/tb_laser_fusion_clang.exe` printed `tb_laser_fusion PASS`.
+- Patched `run_hls.tcl` to prefer Vitis-bundled clang for C simulation when `RDI_APPROOT` is available.
+- Added `peizhun_jiguang/hls/run_manual_clang_check.ps1` so the parser/bin/fallback/warp/fusion testbench can be rebuilt and rerun even if HLS make/MSYS is blocked.
+- Re-ran `peizhun_jiguang/hls/run_manual_clang_check.ps1` successfully with clean output: `tb_laser_fusion PASS`.
+- Re-ran default HLS synthesis after setting `exit` and default full part; command now exits normally with code 0 in about 32 seconds.
+- Re-ran HLS C simulation after launcher fixes; it still fails before compilation because bundled MSYS `cat.exe` hits Win32 error 5.
+- Marked Phase27 complete:
+  - code-level C++ testbench passes;
+  - HLS synthesis passes for the `xczu15eg` device family using full part `xczu15eg-ffvb1156-2-e`;
+  - HLS C simulation blocker is documented as an environment/MSYS issue.
+- Added Phase28 plan for interface/throughput optimization, starting with the RGB AXI read dependence that leaves the main loop at final II=2.
+- Re-ran Vitis HLS C simulation after Tcl updates; it still fails before real compilation because MSYS `cat.exe` hits Win32 error 5 in this shell.
+- Patched `run_hls.tcl` again with a discovered-install fallback for `F:/Vivado/vivado2022.1/Vitis_HLS/2022.1` so HLS C-sim can choose clang even when `RDI_APPROOT` is not exported.
+- User selected `xczu15eg` as the temporary FPGA target device and asked to keep everything else unchanged.
+- Added `target_hardware` to `peizhun_jiguang/config/laser_registration_params.json` with temporary device/part `xczu15eg` and `10 ns` first-pass clock.
+- Added first synthesis entry points:
+  - `peizhun_jiguang/hls/run_hls_synth.tcl`
+  - `peizhun_jiguang/hls/run_vitis_hls_synth.ps1`
+- Updated `peizhun_jiguang` docs to state that `xczu15eg` affects synthesis/resource planning only; the laser range registration strategy is unchanged.
+- Added HLS generated project/build folders to `.gitignore`.
+- First synthesis launch with `xczu15eg` created the HLS project and reached `set_part`, but failed because Vitis HLS could not find the device library (`/parts/arch.xml` missing) and reported `Part 'xczu15eg' is not installed`.
+- Checked the install tree:
+  - no `arch.xml` exists under `F:\Vivado\vivado2022.1\Vitis_HLS\2022.1`;
+  - `arch.xml` exists under `F:\Vivado\vivado2022.1\Vivado\2022.1\data\parts` and `F:\Vivado\vivado2022.1\Vitis\2022.1\data\parts`.
+- Patched `run_vitis_hls.ps1` and `run_vitis_hls_synth.ps1` to set `XILINX_VIVADO=F:\Vivado\vivado2022.1\Vivado\2022.1` before launching HLS.
+- Patched the same launchers to call `F:\Vivado\vivado2022.1\Vitis_HLS\2022.1\settings64.bat` before `loader.bat` in one `cmd.exe` process by default, so Vivado/Vitis parts paths are initialized the way Xilinx expects.
+- Found that direct `loader.bat` does not pass through `hlsArgs.bat`, so `RDI_DEPENDENCY=VITIS_HLS_SETUP` was missing; without it, `rdiArgs.bat` does not append Vivado `data\parts` to `RDI_DATADIR`.
+- Patched both HLS launcher scripts to set `RDI_DEPENDENCY=VITIS_HLS_SETUP` before invoking HLS.
+- Installed device database confirms `xczu15eg` exists, but Vitis HLS `set_part xczu15eg` is not enough; full part is required.
+- `xczu15eg` available packages/speed grades include `ffvb1156` and `ffvc900`; used `xczu15eg-ffvb1156-2-e` as the first concrete full part.
+- HLS synthesis with `xczu15eg-ffvb1156-2-e` generated reports and RTL:
+  - target device `xczu15eg-ffvb1156-2-e`;
+  - estimated clock `7.300 ns` against `10.00 ns` target;
+  - estimated Fmax `136.99 MHz`;
+  - latency `614432` cycles / `6.144 ms`;
+  - loop final II is `2` instead of target `1` because of an AXI read dependence on `gmem0`;
+  - resources: `18` BRAM18K, `8` DSP, `6381` FF, `9604` LUT, `0` URAM.
+- The synthesis command itself timed out at the shell layer after 240 seconds, but HLS reports show `csynth_design done` and RTL/report files were generated. Added `exit` to HLS Tcl files to avoid leaving the shell in interactive `vitis_hls>` prompt after close_project.
+- User asked whether the created IP core can really complete the Phase25 + DA1501A single-point laser rangefinder registration function; concluded that the previous single IP was not sufficient by itself and continued Phase28 improvements.
+- Added DA1501A range/status top declarations and implementation:
+  - `da1501a_range_update_top`
+  - status flags for valid, blind zone, stale, fallback, updated, and out-of-range states.
+- Added packed registration/fusion top:
+  - `laser_register_fuse_packed_lut_top`
+  - `pix32_t` packed RGB input/output
+  - internal Phase24 fallback and Phase25 seed LUT selection from `distance_mm + range_status_flags`.
+- Extended `tb_laser_fusion.cpp` to cover:
+  - DA1501A range update top with a valid 12.3 m frame;
+  - bad checksum rejection;
+  - stale range fallback;
+  - old compatibility top;
+  - new packed LUT top valid/fallback behavior.
+- Checked the DA1501A PDF text locally:
+  - send checksum sums bytes 3-7;
+  - receive checksum sums bytes 1-7;
+  - Protocol 1 receive reserved byte is `0xFF`.
+- Patched parser/test vectors accordingly:
+  - good receive frame is `55 AA 88 01 FF 00 7B 02`;
+  - parser now requires the receive reserved byte to be `0xFF`.
+- Updated synthesis helpers:
+  - `run_hls_synth.tcl` now targets `laser_register_fuse_packed_lut_top`;
+  - added `run_hls_range_synth.tcl` for `da1501a_range_update_top`;
+  - `run_vitis_hls_synth.ps1` now accepts `-TclName`;
+  - `run_hls.tcl` now uses the packed LUT top as its default top.
+- Updated `.gitignore` to ignore `peizhun_jiguang/hls/laser_range_synth_prj/`.
+- Verification passed:
+  - `python -m json.tool .\peizhun_jiguang\config\laser_registration_params.json`
+  - `python -m py_compile .\peizhun_jiguang\scripts\export_laser_lut.py`
+  - `python .\peizhun_jiguang\scripts\export_laser_lut.py --config .\peizhun_jiguang\config\laser_registration_params.json --output-dir .\peizhun_jiguang\generated`
+  - `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\peizhun_jiguang\hls\run_manual_clang_check.ps1`
+- HLS synthesis passed for `laser_register_fuse_packed_lut_top` on `xczu15eg-ffvb1156-2-e`:
+  - estimated clock `7.300 ns`, Fmax `136.99 MHz`;
+  - latency `307230` cycles / `3.072 ms`;
+  - final loop `II=1`;
+  - resources `0` BRAM18K, `7` DSP, `3280` FF, `5634` LUT, `0` URAM.
+- HLS synthesis passed for `da1501a_range_update_top` on `xczu15eg-ffvb1156-2-e`:
+  - estimated clock `3.650 ns`, Fmax `273.97 MHz`;
+  - latency `2-6` cycles / `20-60 ns`, interval `3-7` cycles;
+  - resources `0` BRAM18K, `1` DSP, `178` FF, `764` LUT, `0` URAM.
+- Updated `peizhun_jiguang` README and docs to record the two-IP architecture, latest synthesis results, protocol checksum detail, and the remaining AXI4-Stream/VDMA wrapper plan.
+- User clarified that the final FPGA deliverable should be only one IP core that completes Phase25 + DA1501A single-point near-infrared laser assisted registration.
+- Added unified final HLS top `phase25_laser_register_fuse_ip_top`:
+  - packs DA1501A receive byte updates into `uart_rx_word` and `uart_rx_count`;
+  - owns distance/status/age/fallback state;
+  - calls the Phase25-seeded packed registration/fusion core internally;
+  - exposes debug outputs for `distance_mm`, `status_flags`, and `range_age_frames`.
+- Updated default HLS Tcl files so `run_hls.tcl` and `run_hls_synth.tcl` target `phase25_laser_register_fuse_ip_top`.
+- Extended the testbench to validate the unified top on a good DA1501A frame and stale-range fallback behavior.
+- Manual code-level validation passed again with `tb_laser_fusion PASS`.
+- HLS synthesis passed for the unified final IP `phase25_laser_register_fuse_ip_top` on `xczu15eg-ffvb1156-2-e`:
+  - estimated clock `7.300 ns`, Fmax `136.99 MHz`;
+  - latency `307244-307310` cycles / `3.072-3.073 ms`;
+  - internal image loop `II=1`;
+  - resources `0` BRAM18K, `8` DSP, `4281` FF, `7302` LUT, `0` URAM.
+- Updated `peizhun_jiguang` docs and planning files to state that only `phase25_laser_register_fuse_ip_top` should be packaged as the final IP; the previous parser and packed-fusion tops are internal/debug only.
+- Cleaned the unused old IP-core materials:
+  - removed the old standalone top declarations from `laser_fusion.hpp`;
+  - removed the old standalone wrapper implementations from `laser_fusion.cpp`;
+  - removed the old parser-only synthesis Tcl `run_hls_range_synth.tcl`;
+  - simplified the testbench so it validates the parser helper and the unified final IP instead of exercising old IP tops;
+  - updated `peizhun_jiguang` README/HLS/verification/strategy docs so only `phase25_laser_register_fuse_ip_top` is presented as an exportable IP.
+- Re-verified after cleanup:
+  - source/docs search no longer finds the old standalone IP top names;
+  - manual code-level validation still passes with `tb_laser_fusion PASS`;
+  - HLS synthesis rerun at `2026-04-28 16:52` passes with `phase25_laser_register_fuse_ip_top` as the only selected top, estimated clock `7.300 ns`, latency `307244-307310` cycles, and resources `0` BRAM18K, `8` DSP, `4281` FF, `7302` LUT.
+- Attempted to delete stale generated HLS cache directories containing old reports/RTL, but recursive deletion approval timed out twice. These generated directories are ignored build cache, not current source or current docs.
+- Started Phase30 artifact renaming pass after the user requested concise, distinguishable names for all images and corresponding files under the current workspace.
+- Read the current `runs` contents, then expanded the inventory to the whole workspace.
+- Inventory result:
+  - relevant top-level artifact folders are `runs`, `darklight_mm5`, `mar_scholar_compare`, `mm5_calib_benchmark`, and `peizhun_jiguang`;
+  - image counts are dominated by `mm5_calib_benchmark` (`2708`) and `darklight_mm5` (`276`);
+  - broad rename should exclude `.git`, `.venv`, source code, calibration source files, and stale HLS generated cache directories.
+- Completed the Phase30 rename and document organization pass.
+- Renamed `3151` current output artifacts and saved the map at `docs/manifests/rename_manifest_20260428.csv`.
+- Organized `23` document/report/tool/manifest files and saved the move map at `docs/manifests/document_reorg_manifest_20260428.csv`.
+- Added `docs/README.md` as the index for the reorganized documentation layout.
+- Preserved root entry/recovery files in place: `README.md`, `task_plan.md`, `findings.md`, and `progress.md`.
+- Preserved `mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv`.
+- Updated active Markdown references to the new filenames and document locations.
+- Updated future-output naming in:
+  - `darklight_mm5/calibration_only_method/run_phase25_depth_assisted.py`;
+  - `darklight_mm5/teacher_residual_method/run_teacher_residual.py`.
+- Verification passed:
+  - artifact rename old paths: `0`, missing new paths: `0`;
+  - document move old paths: `0`, missing new paths: `0`;
+  - active old Phase25 filename hits: `0`;
+  - bad selected artifact basenames: `0`;
+  - `python -m py_compile` passed for both updated generation scripts.
+- Started Phase31 GitHub sync to `rappers1998/MM5_test`.
+- Confirmed repository root `E:/aa_read_yan/aMAR/MAR_bianyuan`, branch `main`, remote `git@github.com:rappers1998/MM5_test.git`.
+- Rewrote root `README.md` as the detailed GitHub landing page.
+- Rewrote `darklight_mm5/calibration_only_method/README.md` to remove mojibake and document Phase25 clearly.
+- Relaxed `.gitignore` so current project outputs/reports are synced, while `.venv`, `.git_ssh`, Python caches, Office temp files, and local HLS generated build products remain excluded.
+- Pre-stage checks:
+  - `git diff --check` reported only Windows LF-to-CRLF warnings;
+  - `python -m py_compile .\darklight_mm5\calibration_only_method\run_phase25_depth_assisted.py .\darklight_mm5\teacher_residual_method\run_teacher_residual.py` passed;
+  - candidate synced paths checked: `6122`;
+  - files over `90 MB`: `0`.

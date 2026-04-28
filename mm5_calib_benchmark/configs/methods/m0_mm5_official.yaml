@@ -1,1 +1,10 @@
 method_name: M0_MM5_OFFICIAL
+scene_tune:
+  coarse_radius_px: 28
+  coarse_step_px: 8
+  fine_radius_px: 4
+  fine_step_px: 2
+  coarse_scales: [0.88, 0.94, 1.0, 1.06, 1.12]
+  coarse_angles_deg: [-1.5, 0.0, 1.5]
+  fine_scale_delta: 0.02
+  fine_angle_delta_deg: 0.5

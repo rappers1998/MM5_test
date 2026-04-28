@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ...pipeline import _read_scene_assets
-from ..alignment import apply_scene_tuning, compute_depth_alignment
+from ..alignment import apply_scene_tuning, compute_depth_alignment, scene_tune_kwargs
 from ..board import calibrate_stereo_from_board, calibration_root_from_rows, estimate_relative_pose_epnp, load_board_observations, official_stereo
 
 
@@ -29,10 +29,18 @@ def compute_scene_result(config: dict, row, track: str, context: dict) -> dict:
         depth_result,
         assets["target_image"],
         track,
-        coarse_radius_px=14,
-        coarse_step_px=4,
-        fine_radius_px=2,
-        fine_step_px=1,
-        coarse_scales=[0.95, 0.98, 1.0, 1.02, 1.05],
+        **scene_tune_kwargs(
+            config.get("method"),
+            defaults={
+                "coarse_radius_px": 14,
+                "coarse_step_px": 4,
+                "fine_radius_px": 2,
+                "fine_step_px": 1,
+                "coarse_scales": [0.95, 0.98, 1.0, 1.02, 1.05],
+                "coarse_angles_deg": [-1.0, 0.0, 1.0],
+                "fine_scale_delta": 0.015,
+                "fine_angle_delta_deg": 0.5,
+            },
+        ),
     )
     return {"assets": assets, **tuned}

@@ -34,6 +34,15 @@ def overall_region_error_px(pred_mask: np.ndarray, gt_mask: np.ndarray, valid_ma
     return 0.5 * (pred_term + gt_term)
 
 
+def normalized_overall_region_error(pred_mask: np.ndarray, gt_mask: np.ndarray, valid_mask: np.ndarray) -> float:
+    error_px = overall_region_error_px(pred_mask, gt_mask, valid_mask)
+    if not np.isfinite(float(error_px)):
+        return float("nan")
+    height, width = gt_mask.shape[:2]
+    diagonal = float(np.hypot(width, height))
+    return float(error_px) / max(diagonal, 1.0)
+
+
 def summarize_alignment(
     warped_source: np.ndarray,
     target_image: np.ndarray,
@@ -48,4 +57,5 @@ def summarize_alignment(
         "valid_warp_coverage": coverage,
         "keypoint_transfer_error_px": keypoint_transfer_error_px(pred_mask, gt_mask, valid_mask),
         "overall_region_error_px": overall_region_error_px(pred_mask, gt_mask, valid_mask),
+        "normalized_overall_region_error": normalized_overall_region_error(pred_mask, gt_mask, valid_mask),
     }

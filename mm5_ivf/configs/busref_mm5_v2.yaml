@@ -1,0 +1,30 @@
+data:
+  processed_root: mm5_ivf/data/processed
+  real_split: mm5_ivf/data/processed/splits/split_real_raw.json
+  synth_split: mm5_ivf/data/processed/splits/split_synth_easy.json
+
+runtime:
+  seed: 42
+  device: cpu
+  image_size: [160, 128]
+  batch_size: 4
+  num_workers: 0
+  train_limit: 48
+  val_limit: 16
+
+training:
+  epochs: 2
+  lr: 0.0001
+  recon_ssim_weight: 0.2
+  reg_mncc_weight: 1.0
+  reg_mmse_weight: 1.0
+  reg_grad_weight: 0.2
+  reg_smooth_weight: 0.02
+  fuse_ssim_weight: 0.4
+  fuse_grad_weight: 0.6
+
+outputs:
+  root: mm5_ivf/outputs
+  recon_dir: mm5_ivf/outputs/checkpoints/busref_recon_v2
+  reg_dir: mm5_ivf/outputs/checkpoints/busref_reg_v2
+  fuse_dir: mm5_ivf/outputs/checkpoints/busref_fuse_v2

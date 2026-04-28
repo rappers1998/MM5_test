@@ -1,0 +1,71 @@
+{
+  "aligned_id": 103,
+  "sequence": 385,
+  "strategy": "calibration_plane",
+  "calibration_file": "calibration\\def_stereocalib_THERM.yml",
+  "plane_depth_mm": 350.0,
+  "rgb_calib_size": null,
+  "lwir_calib_size": [
+    1280,
+    720
+  ],
+  "lwir_principal_offset": [
+    20.0,
+    0.0
+  ],
+  "t_scale": 1.45,
+  "max_residual_shift": 0,
+  "H_rgb_to_lwir_plane": [
+    [
+      0.5159482437499937,
+      0.02722540965368296,
+      51.952335452339625
+    ],
+    [
+      -0.010208507543014816,
+      0.768119868014674,
+      -22.17117524683724
+    ],
+    [
+      -2.2914860672932315e-05,
+      7.307679543782943e-05,
+      1.0
+    ]
+  ],
+  "H_lwir_to_rgb_plane": [
+    [
+      1.9409059596011102,
+      -0.059076164249572974,
+      -102.14438548513023
+    ],
+    [
+      0.027021887163695746,
+      1.3039695809497436,
+      27.50668794929809
+    ],
+    [
+      4.250091672291793e-05,
+      -9.664364039708679e-05,
+      1.0
+    ]
+  ],
+  "initial_metrics": {
+    "ncc": 0.3098401129245758,
+    "edge_distance": 3.5581791400909424,
+    "valid_ratio": 0.8324164496527777,
+    "score": 0.31468040783137974
+  },
+  "refine_info": {
+    "accepted": false,
+    "dx": 0,
+    "dy": 0,
+    "score_gain": 0.0,
+    "edge_distance_gain": 0.0
+  },
+  "final_metrics": {
+    "ncc": 0.3098401129245758,
+    "edge_distance": 3.5581791400909424,
+    "valid_ratio": 0.8324164496527777,
+    "score": 0.31468040783137974
+  }
+}

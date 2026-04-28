@@ -1,0 +1,18 @@
+{
+  "method_name": "M1_ZHANG_OPENCV",
+  "track": "UV",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 0.19074816660871843,
+  "checkerboard_corner_rmse_px": 0.2213816055966493,
+  "keypoint_transfer_error_px": 38.87634671529134,
+  "overall_region_error_px": 31.922473720709483,
+  "normalized_overall_region_error": 0.034621200067731714,
+  "ntg": 0.07694907236785807,
+  "mutual_information": 0.21761005221489868,
+  "valid_warp_coverage": 0.9685835423096708,
+  "mean_iou": 0.20342378415722118,
+  "freq_iou": 0.9168516657637792,
+  "pixel_accuracy": 0.945269120233307,
+  "mean_pixel_accuracy": 0.2618648492876642,
+  "boundary_f1": 0.061430473154391624
+}

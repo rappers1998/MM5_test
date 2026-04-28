@@ -1,1 +1,22 @@
 method_name: M2_SU2025_XOFTR_FALLBACK
+scene_tune:
+  coarse_radius_px: 12
+  coarse_step_px: 4
+  fine_radius_px: 2
+  fine_step_px: 1
+  coarse_scales: [0.96, 0.99, 1.0, 1.01, 1.04]
+  coarse_angles_deg: [-1.0, 0.0, 1.0]
+  fine_scale_delta: 0.015
+  fine_angle_delta_deg: 0.5
+feature_refine:
+  use_clahe: true
+  sift_nfeatures: 1200
+  orb_nfeatures: 1400
+  ratio_test: 0.76
+  max_matches: 96
+  min_matches: 10
+  ransac_reproj_threshold: 4.0
+  max_iters: 8000
+  scale_min: 0.90
+  scale_max: 1.10
+  max_translation_px: 60.0

@@ -1,0 +1,18 @@
+{
+  "method_name": "M5_EPNP_BASELINE",
+  "track": "THERMAL",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 2.287250734931213,
+  "checkerboard_corner_rmse_px": 2.394632259230419,
+  "keypoint_transfer_error_px": 13.547623952229818,
+  "overall_region_error_px": 4.02909321380721,
+  "normalized_overall_region_error": 0.0049159269078134825,
+  "ntg": 0.20249574915528426,
+  "mutual_information": 0.29332111563243907,
+  "valid_warp_coverage": 0.9278509521484374,
+  "mean_iou": 0.47372154447871195,
+  "freq_iou": 0.9504189310105571,
+  "pixel_accuracy": 0.9682377631056448,
+  "mean_pixel_accuracy": 0.79311962817784,
+  "boundary_f1": 0.3244411668847823
+}

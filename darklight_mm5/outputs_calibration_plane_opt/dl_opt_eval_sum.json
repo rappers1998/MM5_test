@@ -1,0 +1,63 @@
+{
+  "strategy": "calibration_plane_optimized",
+  "output": ".\\darklight_mm5\\outputs_calibration_plane_opt",
+  "reference_output": "darklight_mm5/outputs",
+  "sample_count": 3,
+  "means": {
+    "aligned_id": 104.33333333333333,
+    "sequence": 386.3333333333333,
+    "target_ncc": 0.2623670945564906,
+    "target_mi": 0.5388221719460075,
+    "target_edge_distance": 5.4258049329121905,
+    "target_valid_ratio": 0.8336512586805555,
+    "raw_rgb_ncc": 0.2632133662700653,
+    "raw_rgb_edge_distance": 2.1906277338663735,
+    "valid_ratio": 0.8336512586805555,
+    "fusion_entropy_gain_vs_raw_rgb": 1.389127817547268,
+    "fusion_alpha_coverage": 0.010658275462962963
+  },
+  "per_sample": [
+    {
+      "sample": "103_seq385",
+      "aligned_id": 103,
+      "sequence": 385,
+      "target_ncc": 0.3648748993873596,
+      "target_mi": 0.49268743856707126,
+      "target_edge_distance": 3.9272403717041016,
+      "target_valid_ratio": 0.8336512586805556,
+      "raw_rgb_ncc": 0.3666345179080963,
+      "raw_rgb_edge_distance": 2.882617473602295,
+      "valid_ratio": 0.8336512586805556,
+      "fusion_entropy_gain_vs_raw_rgb": 1.3957109718188292,
+      "fusion_alpha_coverage": 0.010674913194444444
+    },
+    {
+      "sample": "104_seq386",
+      "aligned_id": 104,
+      "sequence": 386,
+      "target_ncc": 0.16870535910129547,
+      "target_mi": 0.5649333951669814,
+      "target_edge_distance": 5.748115062713623,
+      "target_valid_ratio": 0.8336512586805556,
+      "raw_rgb_ncc": 0.18424658477306366,
+      "raw_rgb_edge_distance": 2.2679288387298584,
+      "valid_ratio": 0.8336512586805556,
+      "fusion_entropy_gain_vs_raw_rgb": 1.389842949553136,
+      "fusion_alpha_coverage": 0.010135633680555556
+    },
+    {
+      "sample": "106_seq388",
+      "aligned_id": 106,
+      "sequence": 388,
+      "target_ncc": 0.25352102518081665,
+      "target_mi": 0.5588456821039698,
+      "target_edge_distance": 6.602059364318848,
+      "target_valid_ratio": 0.8336512586805556,
+      "raw_rgb_ncc": 0.23875899612903595,
+      "raw_rgb_edge_distance": 1.4213368892669678,
+      "valid_ratio": 0.8336512586805556,
+      "fusion_entropy_gain_vs_raw_rgb": 1.3818295312698394,
+      "fusion_alpha_coverage": 0.011164279513888889
+    }
+  ]
+}

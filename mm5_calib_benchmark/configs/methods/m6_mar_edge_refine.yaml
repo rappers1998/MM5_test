@@ -1,1 +1,10 @@
 method_name: M6_MAR_EDGE_REFINE
+scene_tune:
+  coarse_radius_px: 12
+  coarse_step_px: 4
+  fine_radius_px: 2
+  fine_step_px: 1
+  coarse_scales: [0.97, 0.99, 1.0, 1.01, 1.03]
+  coarse_angles_deg: [-1.0, 0.0, 1.0]
+  fine_scale_delta: 0.01
+  fine_angle_delta_deg: 0.5

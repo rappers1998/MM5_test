@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "name": "phase25_laser_range_fpga_seed",
+  "description": "FPGA-oriented seed parameters derived from the Phase25/Phase24 registration stack. Replace range bins with real laser-to-camera calibration before hardware acceptance.",
+  "target_hardware": {
+    "temporary_device": "xczu15eg",
+    "hls_part": "xczu15eg-ffvb1156-2-e",
+    "clock_period_ns": 10.0,
+    "note": "Temporary device target confirmed by user as xczu15eg. Full HLS part is set to xczu15eg-ffvb1156-2-e for synthesis because Vitis HLS requires package and speed grade."
+  },
+  "units": {
+    "distance": "mm",
+    "affine": "output_rgb_canvas_pixel_to_raw_lwir_pixel",
+    "alpha": "0_to_255"
+  },
+  "phase_references": {
+    "phase21_rgb_offset_xy": [296, 103],
+    "phase23_lwir_crop_offset_xy": [280, 115],
+    "phase24_lwir_to_rgb_affine": [
+      [0.964242690293037, 0.13137386244365368, -26.99199754875218],
+      [-0.06631033534806513, 0.9894192701549352, 24.920322865264623]
+    ],
+    "phase24_output_to_raw_lwir_affine": [
+      [1.0276992809, -0.1364566295, 311.14019972],
+      [0.0688758407, 1.0015486297, 91.90018128]
+    ],
+    "phase25_depth_selected_residual_shift_xy": [-2, 2],
+    "phase25_seed_output_to_raw_lwir_affine": [
+      [1.0276992809, -0.1364566295, 313.46851154],
+      [0.0688758407, 1.0015486297, 90.03483570]
+    ],
+    "phase24_lwir_ncc_mean_min": [0.9182, 0.9118],
+    "phase25_lwir_ncc_mean_min": [0.9321, 0.9261],
+    "retained_bridge_lwir_ncc_mean_min": [0.9233, 0.9064]
+  },
+  "image_geometry": {
+    "output_width": 640,
+    "output_height": 480,
+    "raw_lwir_width": 640,
+    "raw_lwir_height": 512,
+    "raw_rgb_width": 1280,
+    "raw_rgb_height": 720
+  },
+  "fixed_point": {
+    "affine_frac_bits": 16,
+    "coord_frac_bits": 8,
+    "alpha_frac_bits": 8,
+    "distance_scale_mm": 1
+  },
+  "rangefinder": {
+    "model": "DA1501A",
+    "wavelength_nm": 905,
+    "uart_baud": 115200,
+    "uart_format": "8N1",
+    "preferred_protocol": 1,
+    "blind_zone_mm": 10000,
+    "stale_frame_limit": 5,
+    "valid_distance_min_mm": 10000,
+    "valid_distance_max_mm": 1500000,
+    "fallback_on_invalid": true
+  },
+  "fallback": {
+    "name": "phase24_board_affine_baseline",
+    "reason": "Used when laser range is invalid, stale, inside blind zone, or outside all calibrated bins.",
+    "output_to_raw_lwir_affine": [
+      [1.0276992809, -0.1364566295, 311.14019972],
+      [0.0688758407, 1.0015486297, 91.90018128]
+    ],
+    "residual_shift_xy": [0, 0],
+    "fusion_alpha": 96,
+    "lwir_gain": 1.0,
+    "lwir_offset": 0
+  },
+  "range_bins": [
+    {
+      "name": "seed_10m_to_20m_phase25_residual",
+      "min_distance_mm": 10000,
+      "max_distance_mm": 20000,
+      "output_to_raw_lwir_affine": [
+        [1.0276992809, -0.1364566295, 313.46851154],
+        [0.0688758407, 1.0015486297, 90.03483570]
+      ],
+      "residual_shift_xy": [-2, 2],
+      "fusion_alpha": 104,
+      "lwir_gain": 1.0,
+      "lwir_offset": 0,
+      "source": "Phase25 seed only; must be replaced by real laser-range calibration."
+    },
+    {
+      "name": "seed_20m_to_50m_phase25_residual",
+      "min_distance_mm": 20000,
+      "max_distance_mm": 50000,
+      "output_to_raw_lwir_affine": [
+        [1.0276992809, -0.1364566295, 313.46851154],
+        [0.0688758407, 1.0015486297, 90.03483570]
+      ],
+      "residual_shift_xy": [-2, 2],
+      "fusion_alpha": 104,
+      "lwir_gain": 1.0,
+      "lwir_offset": 0,
+      "source": "Phase25 seed only; must be replaced by real laser-range calibration."
+    },
+    {
+      "name": "seed_50m_to_300m_phase24_fallback_like",
+      "min_distance_mm": 50000,
+      "max_distance_mm": 300000,
+      "output_to_raw_lwir_affine": [
+        [1.0276992809, -0.1364566295, 311.14019972],
+        [0.0688758407, 1.0015486297, 91.90018128]
+      ],
+      "residual_shift_xy": [0, 0],
+      "fusion_alpha": 96,
+      "lwir_gain": 1.0,
+      "lwir_offset": 0,
+      "source": "Conservative far-range seed; replace after laser calibration."
+    },
+    {
+      "name": "seed_300m_to_1500m_phase24_fallback_like",
+      "min_distance_mm": 300000,
+      "max_distance_mm": 1500000,
+      "output_to_raw_lwir_affine": [
+        [1.0276992809, -0.1364566295, 311.14019972],
+        [0.0688758407, 1.0015486297, 91.90018128]
+      ],
+      "residual_shift_xy": [0, 0],
+      "fusion_alpha": 88,
+      "lwir_gain": 1.0,
+      "lwir_offset": 0,
+      "source": "Conservative far-range seed; replace after laser calibration."
+    }
+  ],
+  "fusion": {
+    "mode": "fixed_alpha_luma_mix",
+    "rgb_luma_coefficients_q8": [77, 150, 29],
+    "default_alpha": 96,
+    "thermal_highlight_threshold": 180,
+    "thermal_highlight_alpha": 128,
+    "saturate_output": true
+  }
+}

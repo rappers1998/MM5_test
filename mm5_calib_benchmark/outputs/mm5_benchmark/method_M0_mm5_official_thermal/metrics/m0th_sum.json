@@ -1,0 +1,18 @@
+{
+  "method_name": "M0_MM5_OFFICIAL",
+  "track": "THERMAL",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 329.8783627954746,
+  "checkerboard_corner_rmse_px": 331.19962938592613,
+  "keypoint_transfer_error_px": 260.32013244628905,
+  "overall_region_error_px": 283.69963887532555,
+  "normalized_overall_region_error": 0.3461440613249892,
+  "ntg": 0.219679332065366,
+  "mutual_information": 0.35636297892961266,
+  "valid_warp_coverage": 0.8512355550130207,
+  "mean_iou": 0.11801590661776548,
+  "freq_iou": 0.8730399068383552,
+  "pixel_accuracy": 0.9198753439597055,
+  "mean_pixel_accuracy": 0.1276133257940989,
+  "boundary_f1": 0.003964757012348993
+}

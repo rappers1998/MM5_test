@@ -308,6 +308,7 @@ def run_method(config: dict[str, Any], method_key: str, track: str) -> dict[str,
         "boundary_f1": [],
         "keypoint_transfer_error_px": [],
         "overall_region_error_px": [],
+        "normalized_overall_region_error": [],
         "mutual_information": [],
         "ntg": [],
         "valid_warp_coverage": [],
@@ -335,6 +336,7 @@ def run_method(config: dict[str, Any], method_key: str, track: str) -> dict[str,
         "checkerboard_corner_rmse_px": float(context.get("calibration_metrics", {}).get("checkerboard_corner_rmse_px", 0.0)),
         "keypoint_transfer_error_px": float(np.mean(accumulators["keypoint_transfer_error_px"])) if accumulators["keypoint_transfer_error_px"] else 0.0,
         "overall_region_error_px": float(np.mean(accumulators["overall_region_error_px"])) if accumulators["overall_region_error_px"] else 0.0,
+        "normalized_overall_region_error": float(np.mean(accumulators["normalized_overall_region_error"])) if accumulators["normalized_overall_region_error"] else 0.0,
         "ntg": float(np.mean(accumulators["ntg"])) if accumulators["ntg"] else 0.0,
         "mutual_information": float(np.mean(accumulators["mutual_information"])) if accumulators["mutual_information"] else 0.0,
         "valid_warp_coverage": float(np.mean(accumulators["valid_warp_coverage"])) if accumulators["valid_warp_coverage"] else 0.0,
@@ -410,6 +412,7 @@ def _legacy_metrics_row(track: str, method: str, summary: dict[str, Any]) -> dic
         "valid_warp_coverage": float("nan"),
         "keypoint_transfer_error_px": float("nan"),
         "overall_region_error_px": float("nan"),
+        "normalized_overall_region_error": float("nan"),
     }
 
 
@@ -588,6 +591,29 @@ def _load_method_test_summary(config: dict[str, Any], method_key: str, track: st
     return _read_json_if_exists(summary_path)
 
 
+def _load_method_per_scene_rows(config: dict[str, Any], method_key: str, track: str) -> list[dict[str, Any]]:
+    csv_path = output_dir_for(config, method_key, track) / "metrics" / "per_scene.csv"
+    if not csv_path.exists():
+        return []
+    reader = csv.DictReader(io.StringIO(_read_csv_text(csv_path)))
+    rows: list[dict[str, Any]] = []
+    for row in reader:
+        parsed: dict[str, Any] = {}
+        for key, value in row.items():
+            value = value or ""
+            if key == "sequence":
+                parsed[key] = int(value) if value else 0
+            elif key == "track":
+                parsed[key] = value
+            else:
+                try:
+                    parsed[key] = float(value)
+                except (TypeError, ValueError):
+                    parsed[key] = float("nan")
+        rows.append(parsed)
+    return rows
+
+
 def _comparison_method_specs(config: dict[str, Any]) -> tuple[list[tuple[str, str]], dict[str, dict[str, Any]]]:
     ordered_specs = [
         ("m1", "M1"),
@@ -634,19 +660,65 @@ def _build_method_ranking_rows(test_summaries: dict[str, dict[str, Any]]) -> lis
                 "boundary_f1": _finite_metric(summary.get("boundary_f1")),
                 "keypoint_transfer_error_px": _finite_metric(summary.get("keypoint_transfer_error_px")),
                 "overall_region_error_px": _finite_metric(summary.get("overall_region_error_px")),
+                "normalized_overall_region_error": _finite_metric(summary.get("normalized_overall_region_error")),
                 "valid_warp_coverage": _finite_metric(summary.get("valid_warp_coverage")),
                 "num_test_scenes": int(summary.get("num_test_scenes", 0)),
             }
         )
     rows.sort(
         key=lambda row: (
-            _finite_metric(row.get("overall_region_error_px"), float("inf")),
+            _finite_metric(row.get("normalized_overall_region_error"), float("inf")),
             -_finite_metric(row.get("mean_iou"), -1.0),
             -_finite_metric(row.get("pixel_accuracy"), -1.0),
             str(row.get("method", "")),
         )
     )
     return rows
+
+
+def _build_per_scene_normalized_error_rows(
+    config: dict[str, Any],
+    ordered_specs: list[tuple[str, str]],
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    per_method_rows: dict[str, dict[int, dict[str, Any]]] = {}
+    common_sequences: set[int] | None = None
+    win_counts = {label: 0 for _, label in ordered_specs}
+
+    for method_key, label in ordered_specs:
+        rows = _load_method_per_scene_rows(config, method_key, "thermal")
+        if not rows:
+            continue
+        row_map = {int(row["sequence"]): row for row in rows}
+        per_method_rows[label] = row_map
+        sequence_set = set(row_map)
+        common_sequences = sequence_set if common_sequences is None else (common_sequences & sequence_set)
+
+    if not per_method_rows or not common_sequences:
+        return [], win_counts
+
+    merged_rows: list[dict[str, Any]] = []
+    for sequence in sorted(common_sequences):
+        merged: dict[str, Any] = {"sequence": int(sequence)}
+        winners: list[tuple[float, str]] = []
+        for _, label in ordered_specs:
+            row = per_method_rows.get(label, {}).get(sequence, {})
+            value = _finite_metric(row.get("normalized_overall_region_error"), float("nan"))
+            merged[f"{label}_normalized_overall_region_error"] = value
+            merged[f"{label}_mean_iou"] = _finite_metric(row.get("mean_iou"), float("nan"))
+            merged[f"{label}_valid_warp_coverage"] = _finite_metric(row.get("valid_warp_coverage"), float("nan"))
+            if np.isfinite(value):
+                winners.append((value, label))
+        if winners:
+            winners.sort()
+            merged["best_method"] = winners[0][1]
+            merged["best_normalized_overall_region_error"] = winners[0][0]
+            win_counts[winners[0][1]] += 1
+        else:
+            merged["best_method"] = ""
+            merged["best_normalized_overall_region_error"] = float("nan")
+        merged_rows.append(merged)
+
+    return merged_rows, win_counts
 
 
 def _draw_rank_bar_section(
@@ -685,7 +757,9 @@ def _draw_rank_bar_section(
         rank_label = f"{idx + 1}. {row['method']}"
         cv2.putText(canvas, rank_label, (20, y), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (240, 240, 240), 1, cv2.LINE_AA)
 
-        if metric_key in {"mean_iou", "pixel_accuracy", "boundary_f1", "valid_warp_coverage"}:
+        if metric_key == "normalized_overall_region_error":
+            value_text = f"{value * 100.0:.2f}%diag"
+        elif metric_key in {"mean_iou", "pixel_accuracy", "boundary_f1", "valid_warp_coverage"}:
             value_text = f"{value:.4f}"
         else:
             value_text = f"{value:.2f}px"
@@ -712,7 +786,7 @@ def _export_method_ranking_chart(out_dir: Path, ranking_rows: list[dict[str, Any
     title = np.full((112, width, 3), 24, dtype=np.uint8)
     title = draw_text_block(
         title,
-        "Thermal 方法排序图（按 test mean_iou 从高到低）\n当前参与排序的方法：M1、M2、M4、M5、M6、M7 | M3 仅有 UV 输出，因此不纳入 thermal 排序",
+        "Thermal method ranking on the test split\nCompared methods: M1, M2, M4, M5, M6, M7 | M3 only outputs UV, so it is excluded here",
         (18, 16),
         font_scale=0.8,
         line_height=30,
@@ -721,7 +795,7 @@ def _export_method_ranking_chart(out_dir: Path, ranking_rows: list[dict[str, Any
     mean_iou_section = _draw_rank_bar_section(
         ranking_rows,
         "mean_iou",
-        "A. test mean_iou（按整体区域误差排序后的同序展示）",
+        "A. Test mean_iou shown in the same order as the region-error ranking",
         width=width,
         row_height=42,
         higher_is_better=True,
@@ -730,7 +804,7 @@ def _export_method_ranking_chart(out_dir: Path, ranking_rows: list[dict[str, Any
     pixel_acc_section = _draw_rank_bar_section(
         ranking_rows,
         "pixel_accuracy",
-        "B. 同一排序下的 test pixel_accuracy",
+        "B. Test pixel_accuracy in the same method order",
         width=width,
         row_height=42,
         higher_is_better=True,
@@ -739,22 +813,31 @@ def _export_method_ranking_chart(out_dir: Path, ranking_rows: list[dict[str, Any
     region_section = _draw_rank_bar_section(
         ranking_rows,
         "overall_region_error_px",
-        "C. 整体区域平均像素误差：overall_region_error_px（越低越好）",
+        "C. Whole-region mean error: overall_region_error_px (lower is better)",
         width=width,
         row_height=42,
         higher_is_better=False,
         max_value=max(_finite_metric(row.get("overall_region_error_px"), 0.0) for row in ranking_rows) * 1.10,
     )
+    norm_region_section = _draw_rank_bar_section(
+        ranking_rows,
+        "normalized_overall_region_error",
+        "D. Normalized whole-region error: normalized_overall_region_error (lower is better)",
+        width=width,
+        row_height=42,
+        higher_is_better=False,
+        max_value=max(_finite_metric(row.get("normalized_overall_region_error"), 0.0) for row in ranking_rows) * 1.10,
+    )
     keypoint_section = _draw_rank_bar_section(
         ranking_rows,
         "keypoint_transfer_error_px",
-        "D. 旧边界误差：keypoint_transfer_error_px（越低越好）",
+        "E. Boundary-focused geometry error: keypoint_transfer_error_px (lower is better)",
         width=width,
         row_height=42,
         higher_is_better=False,
         max_value=max(_finite_metric(row.get("keypoint_transfer_error_px"), 0.0) for row in ranking_rows) * 1.10,
     )
-    chart = compose_rows([[title], [region_section], [mean_iou_section], [pixel_acc_section], [keypoint_section]], gap=12)
+    chart = compose_rows([[title], [region_section], [norm_region_section], [mean_iou_section], [pixel_acc_section], [keypoint_section]], gap=12)
     write_image(out_dir / "scene_282_3_thermal_method_ranking_bar.png", chart)
     write_image(out_dir / "scene_282_3_thermal_overall_region_ranking_bar.png", chart)
 
@@ -763,6 +846,7 @@ def _export_method_ranking_chart(out_dir: Path, ranking_rows: list[dict[str, Any
             "rank": idx + 1,
             "method": row["method"],
             "overall_region_error_px": row["overall_region_error_px"],
+            "normalized_overall_region_error": row["normalized_overall_region_error"],
             "mean_iou": row["mean_iou"],
             "pixel_accuracy": row["pixel_accuracy"],
             "boundary_f1": row["boundary_f1"],
@@ -789,16 +873,21 @@ def _export_metric_explanation_note(out_dir: Path, thermal_shape: tuple[int, int
         f"- 如果整张图都进入评测，1% 的错误大约对应 {assumed_wrong_px} 个像素。",
         "- 但 `pixel_accuracy` 不是一个直接的几何位移像素量，它并不等价于 `0.01 px` 的校准偏差。",
         "- 这次新增的 `overall_region_error_px` 更偏向整体区域误差：它对整个前景区域做双向平均距离，而不是只看边界。",
+        "- 为了让 thermal 与 UV 这两种不同分辨率结果可以直接比较，这次把它进一步归一化为 `normalized_overall_region_error = overall_region_error_px / image_diagonal_px`。",
+        "- 这个归一化版本可以理解为“整体区域平均误差占图像对角线的比例”，越低说明整体校准越精确。",
         "- 原来的 `keypoint_transfer_error_px` 仍然保留，但它更偏向边界平均误差。",
         "- `mean_iou` 的含义是：先对每个类别计算 `IoU = intersection / union`，然后对各类取平均。它比 `pixel_accuracy` 更敏感于前景错位、类别混淆和边界问题。",
+        "- `boundary_f1` 更强调轮廓是否贴边，它适合观察目标边缘有没有“糊在一起”或者“错开一圈”。",
+        "- `valid_warp_coverage` 表示有效投影覆盖率。如果它偏低，说明虽然局部结果可能看起来不错，但实际上只有一部分区域被稳定投影到了目标图像里。",
+        "- 如果一个方法的 `normalized_overall_region_error` 很低，但 `valid_warp_coverage` 也很低，通常表示它只在一小块有效区域里对齐得很好，不能单独据此判为整体最优。",
         "- 实际上，一个方法即使 `pixel_accuracy` 很高，也可能因为背景占比大而让 `mean_iou` 仍然一般，这通常意味着前景轮廓和局部区域还没有真正对齐好。",
         "",
-        "## 当前排序结果（按 overall_region_error_px 从低到高，也就是从最好到最差）",
+        "## 当前排序结果（按 normalized_overall_region_error 从低到高，也就是从最好到最差）",
         "",
     ]
     for idx, row in enumerate(ranking_rows, start=1):
         note_lines.append(
-            f"- {idx}. {row['method']}: overall_region_error_px={row['overall_region_error_px']:.2f}px, mean_iou={row['mean_iou']:.4f}, pixel_accuracy={row['pixel_accuracy']:.4f}, keypoint_transfer_error_px={row['keypoint_transfer_error_px']:.2f}px"
+            f"- {idx}. {row['method']}: normalized_overall_region_error={row['normalized_overall_region_error'] * 100.0:.2f}%diag, overall_region_error_px={row['overall_region_error_px']:.2f}px, mean_iou={row['mean_iou']:.4f}, boundary_f1={row['boundary_f1']:.4f}, pixel_accuracy={row['pixel_accuracy']:.4f}, valid_warp_coverage={row['valid_warp_coverage']:.4f}, keypoint_transfer_error_px={row['keypoint_transfer_error_px']:.2f}px"
         )
     note_lines.extend(
         [
@@ -807,10 +896,216 @@ def _export_metric_explanation_note(out_dir: Path, thermal_shape: tuple[int, int
             "",
             "- 它表示 99% 的有效像素类别判断正确。",
             "- 它并不保证物体轮廓已经完全贴合。",
-            "- 因此在看校准质量时，应该结合 `mean_iou`、`boundary_f1`、`overall_region_error_px` 和 `keypoint_transfer_error_px` 一起判断。",
+            "- 如果必须选一个最能代表“整体校准精确度”的主参数，这里更推荐 `normalized_overall_region_error`。",
+            "- 因此在看校准质量时，应该结合 `mean_iou`、`boundary_f1`、`normalized_overall_region_error` 和 `keypoint_transfer_error_px` 一起判断。",
         ]
     )
     (out_dir / "scene_282_3_metric_explanation.md").write_text("\n".join(note_lines), encoding="utf-8")
+
+
+def _normalized_error_cell_color(value: float, max_value: float) -> tuple[int, int, int]:
+    ratio = float(np.clip(value / max(max_value, 1e-9), 0.0, 1.0))
+    if ratio <= 0.5:
+        local = ratio / 0.5
+        start = np.asarray((60, 150, 60), dtype=np.float32)
+        end = np.asarray((70, 190, 220), dtype=np.float32)
+    else:
+        local = (ratio - 0.5) / 0.5
+        start = np.asarray((70, 190, 220), dtype=np.float32)
+        end = np.asarray((80, 80, 230), dtype=np.float32)
+    color = start + local * (end - start)
+    return tuple(int(v) for v in color)
+
+
+def _export_per_scene_normalized_error_artifacts(
+    out_dir: Path,
+    per_scene_rows: list[dict[str, Any]],
+    ordered_specs: list[tuple[str, str]],
+    ranking_rows: list[dict[str, Any]],
+    win_counts: dict[str, int],
+) -> None:
+    if not per_scene_rows:
+        return
+
+    method_labels = [label for _, label in ordered_specs]
+    csv_rows = []
+    all_values: list[float] = []
+    for row in per_scene_rows:
+        csv_row = {
+            "sequence": int(row["sequence"]),
+            "best_method": str(row.get("best_method", "")),
+            "best_normalized_overall_region_error": _finite_metric(row.get("best_normalized_overall_region_error"), float("nan")),
+        }
+        for label in method_labels:
+            value = _finite_metric(row.get(f"{label}_normalized_overall_region_error"), float("nan"))
+            csv_row[f"{label}_normalized_overall_region_error"] = value
+            if np.isfinite(value):
+                all_values.append(value)
+        csv_rows.append(csv_row)
+    _write_csv(out_dir / "scene_282_3_thermal_per_scene_normalized_error.csv", csv_rows)
+
+    max_value = max(all_values) if all_values else 1.0
+    width = 1380
+    row_height = 30
+    header_h = 140
+    table_h = 48 + (len(per_scene_rows) + 1) * row_height
+    canvas = np.full((header_h + table_h, width, 3), 24, dtype=np.uint8)
+    canvas = draw_text_block(
+        canvas,
+        "Thermal per-scene normalized overall region error\nEach row is one test image; lower is better; white border marks the best method for that scene",
+        (18, 16),
+        font_scale=0.74,
+        line_height=28,
+    )
+
+    y_summary = 88
+    for idx, label in enumerate(method_labels):
+        rank_row = next((row for row in ranking_rows if row["method"] == label), None)
+        mean_value = _finite_metric((rank_row or {}).get("normalized_overall_region_error"), float("nan"))
+        summary_text = f"{label}: mean={mean_value * 100.0:.2f}%diag, wins={int(win_counts.get(label, 0))}"
+        x_summary = 18 + (idx % 3) * 430
+        y_offset = y_summary + (idx // 3) * 24
+        cv2.putText(canvas, summary_text, (x_summary, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (232, 232, 232), 1, cv2.LINE_AA)
+
+    seq_col_w = 90
+    method_col_w = 180
+    best_col_w = 150
+    table_x = 18
+    table_y = header_h
+    cv2.putText(canvas, "Seq", (table_x + 10, table_y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.56, (240, 240, 240), 1, cv2.LINE_AA)
+    for idx, label in enumerate(method_labels):
+        x = table_x + seq_col_w + idx * method_col_w
+        cv2.putText(canvas, label, (x + 10, table_y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.56, (240, 240, 240), 1, cv2.LINE_AA)
+    best_x = table_x + seq_col_w + len(method_labels) * method_col_w
+    cv2.putText(canvas, "Best", (best_x + 10, table_y + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.56, (240, 240, 240), 1, cv2.LINE_AA)
+
+    mean_row_y = table_y + 36
+    cv2.rectangle(canvas, (table_x, mean_row_y - 20), (best_x + best_col_w, mean_row_y + 6), (36, 36, 36), -1)
+    cv2.putText(canvas, "Mean", (table_x + 10, mean_row_y), cv2.FONT_HERSHEY_SIMPLEX, 0.54, (235, 235, 235), 1, cv2.LINE_AA)
+    for idx, label in enumerate(method_labels):
+        rank_row = next((row for row in ranking_rows if row["method"] == label), None)
+        mean_value = _finite_metric((rank_row or {}).get("normalized_overall_region_error"), float("nan"))
+        x = table_x + seq_col_w + idx * method_col_w
+        cv2.putText(canvas, f"{mean_value * 100.0:.2f}%diag", (x + 10, mean_row_y), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (220, 220, 220), 1, cv2.LINE_AA)
+    cv2.putText(canvas, "-", (best_x + 30, mean_row_y), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (220, 220, 220), 1, cv2.LINE_AA)
+
+    for row_idx, row in enumerate(per_scene_rows, start=1):
+        y = table_y + 36 + row_idx * row_height
+        cv2.rectangle(canvas, (table_x, y - 20), (best_x + best_col_w, y + 6), (28, 28, 28), -1)
+        cv2.putText(canvas, str(int(row["sequence"])), (table_x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (240, 240, 240), 1, cv2.LINE_AA)
+        best_method = str(row.get("best_method", ""))
+        for idx, label in enumerate(method_labels):
+            value = _finite_metric(row.get(f"{label}_normalized_overall_region_error"), float("nan"))
+            x = table_x + seq_col_w + idx * method_col_w
+            color = _normalized_error_cell_color(value, max_value) if np.isfinite(value) else (45, 45, 45)
+            cv2.rectangle(canvas, (x, y - 20), (x + method_col_w - 8, y + 6), color, -1)
+            border_color = (250, 250, 250) if label == best_method else (90, 90, 90)
+            border_thickness = 2 if label == best_method else 1
+            cv2.rectangle(canvas, (x, y - 20), (x + method_col_w - 8, y + 6), border_color, border_thickness)
+            value_text = "N/A" if not np.isfinite(value) else f"{value * 100.0:.2f}%diag"
+            cv2.putText(canvas, value_text, (x + 8, y), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(canvas, best_method or "-", (best_x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (235, 235, 235), 1, cv2.LINE_AA)
+
+    write_image(out_dir / "scene_282_3_thermal_per_scene_normalized_error.png", canvas)
+
+    note_lines = [
+        "# Thermal Per-scene Normalized Error Note",
+        "",
+        "- 这张图逐行展示了 test split 上每一张 thermal 图片的 `normalized_overall_region_error`。",
+        "- 白色边框表示该图片上当前误差最低的方法。",
+        "- 该指标越低越好，表示整体前景区域误差占图像对角线的比例越小。",
+        "",
+        "## Scene wins",
+        "",
+    ]
+    for label in method_labels:
+        note_lines.append(f"- {label}: {int(win_counts.get(label, 0))} scenes")
+    note_lines.extend(["", "## Per-scene best method", ""])
+    for row in per_scene_rows:
+        best_method = str(row.get("best_method", ""))
+        best_value = _finite_metric(row.get("best_normalized_overall_region_error"), float("nan"))
+        note_lines.append(
+            f"- seq {int(row['sequence'])}: best={best_method}, normalized_overall_region_error={best_value * 100.0:.2f}%diag"
+        )
+    (out_dir / "scene_282_3_thermal_per_scene_normalized_error_note.md").write_text("\n".join(note_lines), encoding="utf-8")
+
+
+def _remove_stale_uv_comparison_artifacts(out_dir: Path) -> None:
+    stale_paths = [
+        out_dir / "calibration_precision_note.md",
+        out_dir / "calibration_precision_relation.csv",
+        out_dir / "calibration_precision_relationships.png",
+    ]
+    for path in stale_paths:
+        if path.exists():
+            path.unlink()
+
+
+def _export_figure_guide_note(out_dir: Path, ranking_rows: list[dict[str, Any]]) -> None:
+    note_lines = [
+        "# Scene 282 图像阅读说明",
+        "",
+        "- 图内标题统一改成英文，是因为当前 OpenCV 文本绘制不支持稳定的中文渲染；详细中文解释以本文件和 `README.md` 为准。",
+        "",
+        "## 推荐阅读顺序",
+        "",
+        "1. 先看 `scene_282_3_all_methods_comparison.png`，快速理解每个方法在同一场景上的视觉差异。",
+        "2. 再看 `scene_282_3_thermal_method_ranking_bar.png`，确认 test 集上的整体排名，不只看单张图。",
+        "3. 然后看 `scene_282_3_thermal_per_scene_normalized_error.png`，确认每一张 test 图片上到底是哪种方法更稳。",
+        "4. 最后看 `scene_282_3_mar_history_panel.png` 和 `scene_282_3_mar_history_note.md`，把新 benchmark 和历史 MAR 全流程结果对应起来。",
+        "",
+        "## 核心图像说明",
+        "",
+        "### `scene_282_3_all_methods_comparison.png`",
+        "",
+        "- 显示效果：第一行给出 RGB 源图、thermal 目标图和 thermal GT；下面每个方法各占一行，分别展示 prediction、contours、error 三个视角。",
+        "- 重点看什么：`prediction` 看整体类别区域有没有压到正确物体上，`contours` 看边界是否贴边，`error` 看错误主要来自漏检、误检还是类别混淆。",
+        "- 重要参数：`mean_iou`、`boundary_f1`、`pixel_accuracy`、`valid_warp_coverage`、`overall_region_error_px`。",
+        "- 颜色含义：误差图里绿色表示预测正确，蓝色表示误检前景，橙色表示漏掉 GT 前景，紫色表示前景类别错分，黑色表示无效投影区域。",
+        "",
+        "### `scene_282_3_thermal_method_ranking_bar.png` / `scene_282_3_thermal_overall_region_ranking_bar.png`",
+        "",
+        "- 显示效果：把 Scene 282 主对比里出现的六个 thermal 方法放到同一个 test 集排名图里，分别展示区域误差、归一化区域误差、`mean_iou`、`pixel_accuracy` 和 `keypoint_transfer_error_px`。",
+        "- 重点看什么：先看 `normalized_overall_region_error` 和 `overall_region_error_px` 判断整体校准精度，再结合 `mean_iou` 与 `pixel_accuracy` 判断语义是否也同步改善。",
+        "- 重要参数：`normalized_overall_region_error`、`overall_region_error_px`、`mean_iou`、`pixel_accuracy`、`keypoint_transfer_error_px`。",
+        "",
+        "### `scene_282_3_thermal_per_scene_normalized_error.png`",
+        "",
+        "- 显示效果：每一行对应一张 test 图片，每一列对应一个 thermal 方法，单元格内给出该图上的 `normalized_overall_region_error`，白色边框标出该图的最优方法。",
+        "- 重点看什么：它可以回答“某个方法是不是靠少数场景拉高平均分”，也能直接看出哪些图片是难例。",
+        "- 重要参数：`normalized_overall_region_error`、`best_method`。",
+        "",
+        "### `scene_282_3_mar_history_panel.png`",
+        "",
+        "- 显示效果：把历史 MAR 工程版和论文版的 raw/aligned 结果并排放在一起，同时列出几何诊断信息。",
+        "- 重点看什么：对比历史流程在“原始 GT”与“对齐后 GT”下的表现差异，以及几何基线是否成立。",
+        "- 重要参数：`pixel_accuracy`、`mean_iou`、`binary_iou_foreground`、`geometry_baseline_ok`、`real_projected_ratio_on_redistort`。",
+        "",
+        "### `scene_282_3_metric_explanation.md` / `scene_282_3_thermal_per_scene_normalized_error_note.md` / `scene_282_3_mar_history_note.md`",
+        "",
+        "- 显示效果：这三份说明文件分别负责解释指标含义、逐图对比结果、以及历史 MAR 结果来源。",
+        "- 重点看什么：当图像里已经看到明显好坏差异时，用这三份说明确认“到底应该信哪个指标、每个指标讲的是什么”。",
+        "- 重要参数：取决于对应说明文件，但建议优先看 `normalized_overall_region_error`、`mean_iou`、`boundary_f1` 和 `valid_warp_coverage`。",
+        "",
+        "## 当前简要结论",
+        "",
+    ]
+    if ranking_rows:
+        best_row = ranking_rows[0]
+        note_lines.append(
+            f"- 当前按 `normalized_overall_region_error` 排名的热成像最优方法是 `{best_row['method']}`："
+            f"`normalized_overall_region_error={best_row['normalized_overall_region_error'] * 100.0:.2f}%diag`，"
+            f"`overall_region_error_px={best_row['overall_region_error_px']:.2f}px`，"
+            f"`mean_iou={best_row['mean_iou']:.4f}`。"
+        )
+        note_lines.extend(
+        [
+            "- 在当前实现里，`normalized_overall_region_error` 更适合作为跨方法、跨模态的一号主指标；`pixel_accuracy` 可以保留，但不建议单独使用。",
+            "- 如果某个方法的 `normalized_overall_region_error` 排名很前，但 `valid_warp_coverage` 很低，需要警惕它是不是只在很小一块区域上对齐得很好。",
+            "- Scene 282 的主图和逐图误差表都只聚焦 thermal 方法，因此 `M3` 这类 UV-only 方法不在这些汇总图中；它们仍保留在各自的 per-method benchmark 输出目录里。",
+        ]
+    )
+    (out_dir / "scene_282_3_figure_guide.md").write_text("\n".join(note_lines), encoding="utf-8")
 
 
 def generate_scene_2823_comparison(config: dict[str, Any] | None = None) -> Path:
@@ -829,7 +1124,7 @@ def generate_scene_2823_comparison(config: dict[str, Any] | None = None) -> Path
     banner = np.full((100, 1100, 3), 24, dtype=np.uint8)
     banner = draw_text_block(
         banner,
-        "Scene 282 thermal-only 对比图\n当前行顺序已固定为从上到下 M1 -> M7（仅 thermal 方法）",
+        "Scene 282 thermal-only comparison\nRows are shown in a fixed order: M1 -> M7 for thermal methods",
         (14, 18),
         font_scale=0.82,
         line_height=28,
@@ -852,13 +1147,21 @@ def generate_scene_2823_comparison(config: dict[str, Any] | None = None) -> Path
         test_summary = test_summaries.get(method_key, {})
         thermal_overlay = draw_text_block(
             fit_image(mar_like_overlay(result["assets"]["target_image"], result["pred_mask"]), 360, 240),
-            f"{label} prediction\nsceneIoU={summary['mean_iou']:.4f}\ntestIoU={float(test_summary.get('mean_iou', summary['mean_iou'])):.4f}",
+            f"{label} prediction\nscene mIoU={summary['mean_iou']:.4f}\ntest mIoU={float(test_summary.get('mean_iou', summary['mean_iou'])):.4f}",
             (8, 8),
         )
         contour = contour_overlay(ensure_bgr(result["assets"]["target_image"]), result["assets"]["target_mask"], (0, 255, 0))
         contour = contour_overlay(contour, result["pred_mask"], (255, 0, 0))
-        contour = draw_text_block(fit_image(contour, 360, 240), f"{label} contours\nBF1={summary['boundary_f1']:.4f}", (8, 8))
-        heat = draw_text_block(fit_image(error_heatmap(result["pred_mask"], result["assets"]["target_mask"], result["valid_mask"]), 360, 240), f"{label} error\nCov={summary['valid_warp_coverage']:.3f}", (8, 8))
+        contour = draw_text_block(
+            fit_image(contour, 360, 240),
+            f"{label} contours\nBF1={summary['boundary_f1']:.4f}\nPA={summary['pixel_accuracy']:.4f}",
+            (8, 8),
+        )
+        heat = draw_text_block(
+            fit_image(error_heatmap(result["pred_mask"], result["assets"]["target_mask"], result["valid_mask"]), 360, 240),
+            f"{label} error\nCov={summary['valid_warp_coverage']:.3f}\nRegErr={summary['overall_region_error_px']:.2f}px\nNorm={summary['normalized_overall_region_error'] * 100.0:.2f}%diag",
+            (8, 8),
+        )
         all_rows.append([thermal_overlay, contour, heat])
 
     legacy_rows = _export_mar_history_artifacts(out_dir, Path(base_config["project_root"]), metrics_rows)
@@ -871,6 +1174,10 @@ def generate_scene_2823_comparison(config: dict[str, Any] | None = None) -> Path
     write_image(out_dir / "scene_282_3_all_methods_comparison.png", full_panel)
     _write_csv(out_dir / "scene_282_3_metrics.csv", metrics_rows)
     ranking_rows = _build_method_ranking_rows(test_summaries)
+    per_scene_normalized_rows, win_counts = _build_per_scene_normalized_error_rows(base_config, thermal_specs)
     _export_method_ranking_chart(out_dir, ranking_rows)
     _export_metric_explanation_note(out_dir, thermal_assets["target_image"].shape[:2], ranking_rows)
+    _export_per_scene_normalized_error_artifacts(out_dir, per_scene_normalized_rows, thermal_specs, ranking_rows, win_counts)
+    _export_figure_guide_note(out_dir, ranking_rows)
+    _remove_stale_uv_comparison_artifacts(out_dir)
     return out_dir

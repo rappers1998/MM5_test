@@ -1,0 +1,20 @@
+{
+  "aligned_id_mean": 104.33333333333333,
+  "aligned_id_min": 103.0,
+  "aligned_id_max": 106.0,
+  "sequence_mean": 386.3333333333333,
+  "sequence_min": 385.0,
+  "sequence_max": 388.0,
+  "ncc_mean": 0.4899381420885523,
+  "ncc_min": -0.2080843299627304,
+  "ncc_max": 1.0,
+  "edge_distance_mean": 17.685539037370745,
+  "edge_distance_min": 0.0,
+  "edge_distance_max": 38.59048080444336,
+  "valid_ratio_mean": 0.950100730613426,
+  "valid_ratio_min": 0.5987836371527778,
+  "valid_ratio_max": 1.0,
+  "score_mean": 0.3838249078643279,
+  "score_min": -0.3864388068914414,
+  "score_max": 1.0
+}

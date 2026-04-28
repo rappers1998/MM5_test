@@ -1,0 +1,41 @@
+{
+  "strategy": "calibration_plane",
+  "calibration_file": "calibration/def_stereocalib_THERM.yml",
+  "output": "darklight_mm5/outputs_calibration_plane_opt",
+  "selected_parameters": {
+    "lwir_calib_size": "1280x720",
+    "plane_depth_mm": 325.0,
+    "t_scale": 1.45,
+    "lwir_principal_offset": [14.0, 0.0],
+    "max_residual_shift": 2,
+    "fusion_params": {
+      "saliency_sigma": 15.0,
+      "alpha_low_percentile": 40.0,
+      "alpha_high_percentile": 96.0,
+      "alpha_scale": 0.82,
+      "alpha_max": 0.72,
+      "roi_dilate_px": 3
+    }
+  },
+  "validation_summary": {
+    "official_reference_target_ncc_mean": 0.2624,
+    "official_reference_target_mi_mean": 0.5388,
+    "official_reference_target_edge_distance_mean": 5.4258,
+    "raw_rgb_lwir_ncc_mean": 0.2632,
+    "raw_rgb_lwir_edge_distance_mean": 2.1906,
+    "valid_ratio_mean": 0.8337,
+    "fusion_entropy_gain_vs_raw_rgb_mean": 1.3891,
+    "fusion_alpha_coverage_mean": 0.01066
+  },
+  "baseline_summary": {
+    "output": "darklight_mm5/outputs_calibration_plane",
+    "official_reference_target_ncc_mean": 0.2599,
+    "official_reference_target_edge_distance_mean": 5.6309,
+    "raw_rgb_lwir_ncc_mean": 0.2403,
+    "raw_rgb_lwir_edge_distance_mean": 2.6926,
+    "valid_ratio_mean": 0.8324,
+    "fusion_entropy_gain_vs_raw_rgb_mean": 1.3861,
+    "fusion_alpha_coverage_mean": 0.00885
+  },
+  "selection_note": "Optimized calibration-plane version. It keeps the retained official_reference target NCC essentially stable with a small gain, improves target edge distance, improves raw RGB/LWIR NCC and edge distance, and raises thermal fusion coverage moderately without overwriting the baseline output."
+}

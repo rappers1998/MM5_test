@@ -1,0 +1,18 @@
+{
+  "method_name": "M7_DEPTH_GUIDED_SELF_CAL_THERMAL",
+  "track": "THERMAL",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 1.4425983132199671,
+  "checkerboard_corner_rmse_px": 1.4425983132199671,
+  "keypoint_transfer_error_px": 10.628324921925863,
+  "overall_region_error_px": 1.4635199113465205,
+  "normalized_overall_region_error": 0.0017856516418270731,
+  "ntg": 0.1062192028232253,
+  "mutual_information": 0.3699679298706264,
+  "valid_warp_coverage": 0.04781412760416666,
+  "mean_iou": 0.45053111026912274,
+  "freq_iou": 0.4192934506419974,
+  "pixel_accuracy": 0.6358609626578616,
+  "mean_pixel_accuracy": 0.7657164692450658,
+  "boundary_f1": 0.2608861875486795
+}

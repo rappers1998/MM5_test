@@ -1,0 +1,18 @@
+{
+  "method_name": "M6_MAR_EDGE_REFINE",
+  "track": "THERMAL",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 2.287250734931213,
+  "checkerboard_corner_rmse_px": 2.394632259230419,
+  "keypoint_transfer_error_px": 17.114113521575927,
+  "overall_region_error_px": 4.849973219441988,
+  "normalized_overall_region_error": 0.005917488771400383,
+  "ntg": 0.19948653594270535,
+  "mutual_information": 0.2932629074712753,
+  "valid_warp_coverage": 0.9218183390299478,
+  "mean_iou": 0.4290911566389709,
+  "freq_iou": 0.9420253238092808,
+  "pixel_accuracy": 0.9612501562871923,
+  "mean_pixel_accuracy": 0.7856221005194493,
+  "boundary_f1": 0.23388214130228552
+}

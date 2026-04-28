@@ -7,6 +7,59 @@ from scipy import ndimage
 from ..common import compute_plane_homography, modality_preprocess, mutual_information, valid_mask_from_homography, warp_image, warp_mask
 
 
+SCENE_TUNE_DEFAULTS = {
+    "coarse_radius_px": 24,
+    "coarse_step_px": 8,
+    "fine_radius_px": 4,
+    "fine_step_px": 2,
+    "coarse_scales": [0.92, 0.96, 1.00, 1.04, 1.08],
+    "coarse_angles_deg": [0.0],
+    "fine_scale_delta": 0.02,
+    "fine_angle_delta_deg": 0.0,
+    "edge_weight": 1.0,
+    "mi_weight": 0.20,
+    "coverage_weight": 0.50,
+}
+
+
+def _coerce_float_list(value, fallback: list[float]) -> list[float]:
+    if value is None:
+        return list(fallback)
+    if isinstance(value, (list, tuple)):
+        values = [float(item) for item in value]
+        return values or list(fallback)
+    if isinstance(value, str):
+        raw = value.strip()
+        if raw.startswith("[") and raw.endswith("]"):
+            raw = raw[1:-1]
+        values = [float(item.strip()) for item in raw.split(",") if item.strip()]
+        return values or list(fallback)
+    return [float(value)]
+
+
+def scene_tune_kwargs(method_cfg: dict | None, defaults: dict | None = None) -> dict:
+    merged = dict(SCENE_TUNE_DEFAULTS)
+    if defaults:
+        merged.update(defaults)
+    if isinstance(method_cfg, dict):
+        scene_cfg = method_cfg.get("scene_tune", {})
+        if isinstance(scene_cfg, dict):
+            merged.update(scene_cfg)
+    return {
+        "coarse_radius_px": int(merged["coarse_radius_px"]),
+        "coarse_step_px": max(1, int(merged["coarse_step_px"])),
+        "fine_radius_px": int(merged["fine_radius_px"]),
+        "fine_step_px": max(1, int(merged["fine_step_px"])),
+        "coarse_scales": _coerce_float_list(merged.get("coarse_scales"), SCENE_TUNE_DEFAULTS["coarse_scales"]),
+        "coarse_angles_deg": _coerce_float_list(merged.get("coarse_angles_deg"), SCENE_TUNE_DEFAULTS["coarse_angles_deg"]),
+        "fine_scale_delta": float(merged.get("fine_scale_delta", SCENE_TUNE_DEFAULTS["fine_scale_delta"])),
+        "fine_angle_delta_deg": float(merged.get("fine_angle_delta_deg", SCENE_TUNE_DEFAULTS["fine_angle_delta_deg"])),
+        "edge_weight": float(merged.get("edge_weight", SCENE_TUNE_DEFAULTS["edge_weight"])),
+        "mi_weight": float(merged.get("mi_weight", SCENE_TUNE_DEFAULTS["mi_weight"])),
+        "coverage_weight": float(merged.get("coverage_weight", SCENE_TUNE_DEFAULTS["coverage_weight"])),
+    }
+
+
 def compute_homography_alignment(assets: dict, stereo: dict, plane_depth_mm: float) -> dict:
     target_h, target_w = assets["target_mask"].shape
     source_h, source_w = assets["source_mask"].shape
@@ -76,7 +129,12 @@ def auto_scene_tune(
     fine_radius_px: int = 4,
     fine_step_px: int = 2,
     coarse_scales: list[float] | None = None,
+    coarse_angles_deg: list[float] | None = None,
     fine_scale_delta: float = 0.02,
+    fine_angle_delta_deg: float = 0.0,
+    edge_weight: float = 1.0,
+    mi_weight: float = 0.20,
+    coverage_weight: float = 0.50,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
     edge = _target_edge_map(target_image, modality)
     edge_dist = cv2.distanceTransform((1 - edge).astype(np.uint8), cv2.DIST_L2, 3)
@@ -93,7 +151,7 @@ def auto_scene_tune(
         edge_score = -float(edge_dist[boundary].mean())
         mi_score = float(mutual_information(target_image, img_t, valid_t))
         coverage_penalty = abs(float(valid_t.mean()) - base_valid_ratio)
-        score = edge_score + 0.20 * mi_score - 0.5 * coverage_penalty
+        score = float(edge_weight) * edge_score + float(mi_weight) * mi_score - float(coverage_weight) * coverage_penalty
         return score, mask_t, img_t, valid_t
 
     best = {
@@ -102,39 +160,81 @@ def auto_scene_tune(
         "image": warped_source,
         "valid": valid_mask,
         "scale": 1.0,
+        "angle_deg": 0.0,
         "dx": 0.0,
         "dy": 0.0,
     }
 
     if coarse_scales is None:
-        coarse_scales = [0.92, 0.96, 1.00, 1.04, 1.08]
+        coarse_scales = list(SCENE_TUNE_DEFAULTS["coarse_scales"])
+    if coarse_angles_deg is None:
+        coarse_angles_deg = list(SCENE_TUNE_DEFAULTS["coarse_angles_deg"])
     coarse_dx = range(-int(coarse_radius_px), int(coarse_radius_px) + 1, int(coarse_step_px))
     coarse_dy = range(-int(coarse_radius_px), int(coarse_radius_px) + 1, int(coarse_step_px))
-    for scale in coarse_scales:
-        for dx in coarse_dx:
-            for dy in coarse_dy:
-                matrix = cv2.getRotationMatrix2D(center, 0.0, scale)
-                matrix[:, 2] += [dx, dy]
-                score, mask_t, img_t, valid_t = evaluate(matrix)
-                if score > best["score"]:
-                    best.update({"score": score, "mask": mask_t, "image": img_t, "valid": valid_t, "scale": scale, "dx": dx, "dy": dy})
+    for angle_deg in coarse_angles_deg:
+        for scale in coarse_scales:
+            if scale <= 0:
+                continue
+            for dx in coarse_dx:
+                for dy in coarse_dy:
+                    matrix = cv2.getRotationMatrix2D(center, float(angle_deg), float(scale))
+                    matrix[:, 2] += [dx, dy]
+                    score, mask_t, img_t, valid_t = evaluate(matrix)
+                    if score > best["score"]:
+                        best.update(
+                            {
+                                "score": score,
+                                "mask": mask_t,
+                                "image": img_t,
+                                "valid": valid_t,
+                                "scale": scale,
+                                "angle_deg": angle_deg,
+                                "dx": dx,
+                                "dy": dy,
+                            }
+                        )
 
     fine_dx = range(int(best["dx"]) - int(fine_radius_px), int(best["dx"]) + int(fine_radius_px) + 1, int(fine_step_px))
     fine_dy = range(int(best["dy"]) - int(fine_radius_px), int(best["dy"]) + int(fine_radius_px) + 1, int(fine_step_px))
-    fine_scales = [best["scale"] - fine_scale_delta, best["scale"], best["scale"] + fine_scale_delta]
-    for scale in fine_scales:
-        for dx in fine_dx:
-            for dy in fine_dy:
-                matrix = cv2.getRotationMatrix2D(center, 0.0, scale)
-                matrix[:, 2] += [dx, dy]
-                score, mask_t, img_t, valid_t = evaluate(matrix)
-                if score > best["score"]:
-                    best.update({"score": score, "mask": mask_t, "image": img_t, "valid": valid_t, "scale": scale, "dx": dx, "dy": dy})
+    fine_scales = sorted({float(best["scale"] - fine_scale_delta), float(best["scale"]), float(best["scale"] + fine_scale_delta)})
+    if float(fine_angle_delta_deg) > 0:
+        fine_angles = sorted(
+            {
+                float(best["angle_deg"] - fine_angle_delta_deg),
+                float(best["angle_deg"]),
+                float(best["angle_deg"] + fine_angle_delta_deg),
+            }
+        )
+    else:
+        fine_angles = [float(best["angle_deg"])]
+    for angle_deg in fine_angles:
+        for scale in fine_scales:
+            if scale <= 0:
+                continue
+            for dx in fine_dx:
+                for dy in fine_dy:
+                    matrix = cv2.getRotationMatrix2D(center, float(angle_deg), float(scale))
+                    matrix[:, 2] += [dx, dy]
+                    score, mask_t, img_t, valid_t = evaluate(matrix)
+                    if score > best["score"]:
+                        best.update(
+                            {
+                                "score": score,
+                                "mask": mask_t,
+                                "image": img_t,
+                                "valid": valid_t,
+                                "scale": scale,
+                                "angle_deg": angle_deg,
+                                "dx": dx,
+                                "dy": dy,
+                            }
+                        )
 
     info = {
         "dx": float(best["dx"]),
         "dy": float(best["dy"]),
         "scale": float(best["scale"]),
+        "angle_deg": float(best["angle_deg"]),
         "score": float(best["score"]),
         "edge_pixels": int(edge.sum()),
     }
@@ -322,6 +422,12 @@ def apply_scene_tuning(
     fine_radius_px: int,
     fine_step_px: int,
     coarse_scales: list[float],
+    coarse_angles_deg: list[float] | None = None,
+    fine_scale_delta: float = 0.02,
+    fine_angle_delta_deg: float = 0.0,
+    edge_weight: float = 1.0,
+    mi_weight: float = 0.20,
+    coverage_weight: float = 0.50,
 ) -> dict:
     tuned_mask, tuned_image, tuned_valid, tune_info = auto_scene_tune(
         result["pred_mask"],
@@ -334,6 +440,12 @@ def apply_scene_tuning(
         fine_radius_px=int(fine_radius_px),
         fine_step_px=int(fine_step_px),
         coarse_scales=list(coarse_scales),
+        coarse_angles_deg=list(coarse_angles_deg or [0.0]),
+        fine_scale_delta=float(fine_scale_delta),
+        fine_angle_delta_deg=float(fine_angle_delta_deg),
+        edge_weight=float(edge_weight),
+        mi_weight=float(mi_weight),
+        coverage_weight=float(coverage_weight),
     )
     debug = dict(result.get("debug", {}))
     debug["scene_tune"] = tune_info

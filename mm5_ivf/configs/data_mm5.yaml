@@ -1,0 +1,49 @@
+paths:
+  existing_index_csv: mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv
+  workspace_calibration: calibration/def_stereocalib_THERM.yml
+  dataset_root: D:/a三模数据
+  output_root: mm5_ivf/data/processed
+
+runtime:
+  seed: 42
+  plane_depth_mm: 700.0
+  calibration_rgb_native_size: [1280, 720]
+  calibration_lwir_native_size: [1280, 720]
+  raw_target_size: [640, 512]
+  aligned_target_size: [640, 480]
+  preserve_full_canvas: true
+  preview_count: 10
+  synthetic_limit: 0
+
+data:
+  preferred_rgb_field: raw_rgb3_path
+  preferred_lwir_field: raw_thermal16_path
+  aligned_rgb_field: aligned_rgb3_path
+  aligned_lwir_field: aligned_t16_path
+  require_split_labels: true
+  path_fields:
+    - aligned_rgb3_path
+    - aligned_t16_path
+    - raw_rgb3_path
+    - raw_thermal16_path
+    - raw_depth_tr_path
+    - raw_meta_path
+    - calibration_root
+
+perturbation:
+  easy:
+    tx_px: 8.0
+    ty_px: 6.0
+    rot_deg: 4.0
+    scale_delta: 0.04
+    shear_deg: 2.0
+    elastic_alpha: 3.0
+    elastic_sigma: 10.0
+  hard:
+    tx_px: 18.0
+    ty_px: 14.0
+    rot_deg: 8.0
+    scale_delta: 0.08
+    shear_deg: 5.0
+    elastic_alpha: 7.0
+    elastic_sigma: 14.0

@@ -26,7 +26,13 @@ def _read_text_with_fallback(path: Path) -> str:
 
 
 def _parse_scalar(text: str) -> Any:
+    text = text.strip()
     lowered = text.lower()
+    if text.startswith("[") and text.endswith("]"):
+        inner = text[1:-1].strip()
+        if not inner:
+            return []
+        return [_parse_scalar(item.strip()) for item in inner.split(",") if item.strip()]
     if lowered == "true":
         return True
     if lowered == "false":

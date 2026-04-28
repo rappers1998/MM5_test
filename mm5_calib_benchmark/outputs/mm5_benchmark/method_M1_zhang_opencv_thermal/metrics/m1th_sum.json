@@ -1,0 +1,18 @@
+{
+  "method_name": "M1_ZHANG_OPENCV",
+  "track": "THERMAL",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 1.3286217044372537,
+  "checkerboard_corner_rmse_px": 1.4425983132199671,
+  "keypoint_transfer_error_px": 17.543714459737142,
+  "overall_region_error_px": 12.5910731519262,
+  "normalized_overall_region_error": 0.015362462971491742,
+  "ntg": 0.2063899517135241,
+  "mutual_information": 0.29473247455291135,
+  "valid_warp_coverage": 0.9406129964192708,
+  "mean_iou": 0.2548984481195362,
+  "freq_iou": 0.9401113617399051,
+  "pixel_accuracy": 0.9612960523227884,
+  "mean_pixel_accuracy": 0.33810768651031686,
+  "boundary_f1": 0.21896182464133895
+}

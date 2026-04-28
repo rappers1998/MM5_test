@@ -1,0 +1,18 @@
+{
+  "method_name": "M4_DEPTHBRIDGE_ADAPTED",
+  "track": "UV",
+  "num_test_scenes": 30,
+  "reprojection_mae_px": 2.013018839461498,
+  "checkerboard_corner_rmse_px": 2.5226156092067056,
+  "keypoint_transfer_error_px": 27.008900705973307,
+  "overall_region_error_px": 8.467635864003872,
+  "normalized_overall_region_error": 0.009183489911002513,
+  "ntg": 0.07219410103610453,
+  "mutual_information": 0.21507436247437842,
+  "valid_warp_coverage": 0.9735466499485598,
+  "mean_iou": 0.3987766561178534,
+  "freq_iou": 0.9286992091994569,
+  "pixel_accuracy": 0.9507438527442527,
+  "mean_pixel_accuracy": 0.7832864892020528,
+  "boundary_f1": 0.16624183732228665
+}

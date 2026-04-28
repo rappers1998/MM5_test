@@ -17,6 +17,7 @@ from .common import (
     warp_image,
     warp_mask,
 )
+from .methods.alignment import apply_scene_tuning
 from .pipeline import _read_scene_assets
 
 
@@ -26,8 +27,8 @@ def load_m6_base_stereo(config: dict, track: str) -> dict:
     if m5_dir.exists():
         return load_opencv_yaml(m5_dir)
     if track == "thermal":
-        return load_opencv_yaml(Path(config["paths"]["mm5_calibration"]) / "def_stereocalib_THERM.yml")
-    return load_opencv_yaml(Path(config["paths"]["mm5_calibration"]) / "def_stereocalib_UV.yml")
+        return load_opencv_yaml(Path(config["paths"]["workspace_calibration"]) / "def_stereocalib_THERM.yml")
+    return load_opencv_yaml(Path(config["paths"]["workspace_calibration"]) / "def_stereocalib_UV.yml")
 
 
 def _target_edge_map(target_image: np.ndarray, modality: str) -> np.ndarray:
@@ -228,22 +229,25 @@ def refine_alignment_result(
     init_img = warped_source.copy()
     init_valid = valid_mask.astype(np.uint8)
 
-    tuned_mask, tuned_img, tuned_valid, tune_info = auto_scene_tune(
-        init_mask,
-        init_img,
-        init_valid,
+    tuned = apply_scene_tuning(
+        {
+            "pred_mask": init_mask,
+            "warped_source": init_img,
+            "valid_mask": init_valid,
+            "debug": {"alignment": "mar_edge_refine_base"},
+        },
         target_image,
         modality,
         **(tuning_kwargs or {}),
     )
-    refined_mask, rw_info = random_walker_refine_mask(tuned_mask, target_image, modality)
+    refined_mask, rw_info = random_walker_refine_mask(tuned["pred_mask"], target_image, modality)
 
     return {
         "pred_mask": refined_mask.astype(np.uint8),
-        "warped_source": tuned_img,
-        "valid_mask": tuned_valid.astype(np.uint8),
+        "warped_source": tuned["warped_source"],
+        "valid_mask": tuned["valid_mask"].astype(np.uint8),
         "debug": {
-            "tune": tune_info,
+            "tune": tuned["debug"].get("scene_tune", {}),
             "rw": rw_info,
         },
     }

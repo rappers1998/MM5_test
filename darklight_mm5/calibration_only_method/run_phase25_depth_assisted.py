@@ -489,6 +489,17 @@ def augment_phase25_summary(summary_rows: list[dict], metric_rows: list[dict]) -
 
 
 def save_panel(output_dir: Path, row, candidate: CandidateOutput, aligned_rgb: np.ndarray, aligned_lwir_u8: np.ndarray) -> None:
+    panel_tags = {
+        "phase24_affine_lmeds_baseline": "p24_base",
+        "phase25_depth_holefill_keep_phase24_valid": "p25_keep",
+        "phase25_depth_holefill_union_valid": "p25_union",
+        "phase25_depth_project_raw_lwir": "p25_proj",
+        "phase25_depth_registered_global_shift": "p25_reg",
+        "phase25_depth_registered_global_shift_depth_fill": "p25_regfill",
+        "phase25_median_holefill_control": "p25_med",
+    }
+    sample_tag = f"s{int(row.aligned_id):03d}"
+    panel_tag = panel_tags.get(candidate.name, candidate.name)
     aligned_lwir_bgr = cv2.cvtColor(aligned_lwir_u8, cv2.COLOR_GRAY2BGR)
     make_five_panel(
         [
@@ -498,7 +509,7 @@ def save_panel(output_dir: Path, row, candidate: CandidateOutput, aligned_rgb: n
             (aligned_lwir_bgr, "MM5 T16 eval"),
             (make_edge_overlay(candidate.rgb, candidate.lwir, candidate.rgb_valid & candidate.lwir_valid), "Generated edge check"),
         ],
-        output_dir / "panels" / f"{sample_id(row)}_{candidate.name}.png",
+        output_dir / "panels" / f"dl_p25_{sample_tag}_{panel_tag}.png",
         tile_size=(360, 270),
     )
 
@@ -638,7 +649,9 @@ def write_report(
                 valid=row.get("lwir_valid_ratio_mean", float("nan")),
             )
         )
-    (output_dir / "phase25_depth_assisted_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    report_dir = output_dir / "reports"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    (report_dir / "dl_p25_report_p25.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main() -> None:
@@ -657,7 +670,7 @@ def main() -> None:
     parser.add_argument("--depth-translation-radius-px", type=int, default=2)
     parser.add_argument("--depth-foreground-threshold-mm", type=float, default=1000.0)
     parser.add_argument("--output", default="darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted")
-    parser.add_argument("--bridge-metrics", default="darklight_mm5/outputs/metrics/registration_stages.csv")
+    parser.add_argument("--bridge-metrics", default="darklight_mm5/outputs/metrics/dl_ref_met_reg_stage.csv")
     parser.add_argument("--save-panels", action="store_true", default=True)
     args = parser.parse_args()
 
@@ -665,6 +678,7 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "metrics").mkdir(parents=True, exist_ok=True)
     (output_dir / "panels").mkdir(parents=True, exist_ok=True)
+    (output_dir / "reports").mkdir(parents=True, exist_ok=True)
     target_size = parse_size_arg(args.target_size)
     if target_size is None:
         raise ValueError("--target-size must be WxH")
@@ -723,8 +737,8 @@ def main() -> None:
         }
         for item in transforms
     ]
-    write_csv(output_dir / "metrics" / "phase25_board_correspondences.csv", correspondence_rows, collect_fieldnames(correspondence_rows, []))
-    write_csv(output_dir / "metrics" / "phase25_board_transforms.csv", transform_rows, collect_fieldnames(transform_rows, []))
+    write_csv(output_dir / "metrics" / "dl_p25_board_pts.csv", correspondence_rows, collect_fieldnames(correspondence_rows, []))
+    write_csv(output_dir / "metrics" / "dl_p25_board_tf.csv", transform_rows, collect_fieldnames(transform_rows, []))
 
     prepared_rows: list[dict] = []
     for row in rows:
@@ -790,7 +804,7 @@ def main() -> None:
         row["selected_dy_px"] = int(depth_selection["dy_px"])
         row["selected_mean_depth_boundary_distance"] = float(depth_selection["mean_depth_boundary_distance"])
         row["baseline_mean_depth_boundary_distance"] = float(depth_selection["baseline_mean_depth_boundary_distance"])
-    write_csv(output_dir / "metrics" / "phase25_depth_registration_scores.csv", depth_score_rows, collect_fieldnames(depth_score_rows, []))
+    write_csv(output_dir / "metrics" / "dl_p25_score_p25.csv", depth_score_rows, collect_fieldnames(depth_score_rows, []))
 
     metric_rows: list[dict] = []
     candidate_cache: dict[tuple[str, str], CandidateOutput] = {}
@@ -849,8 +863,8 @@ def main() -> None:
 
     summary_rows = summarize(metric_rows)
     augment_phase25_summary(summary_rows, metric_rows)
-    write_csv(output_dir / "metrics" / "phase25_depth_assisted_metrics.csv", metric_rows, collect_fieldnames(metric_rows, []))
-    write_csv(output_dir / "metrics" / "phase25_depth_assisted_summary.csv", summary_rows, collect_fieldnames(summary_rows, []))
+    write_csv(output_dir / "metrics" / "dl_p25_met_p25.csv", metric_rows, collect_fieldnames(metric_rows, []))
+    write_csv(output_dir / "metrics" / "dl_p25_sum_p25.csv", summary_rows, collect_fieldnames(summary_rows, []))
     payload = {
         "constraint": "phase24_geometry_plus_raw_depth_boundary_registration_aligned_eval_only",
         "rows": [sample_id(row) for row in rows],
@@ -867,7 +881,7 @@ def main() -> None:
         ),
         "candidate_summary": summary_rows,
     }
-    (output_dir / "metrics" / "phase25_depth_assisted_summary.json").write_text(
+    (output_dir / "metrics" / "dl_p25_sum_p25.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
