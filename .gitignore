@@ -3,3 +3,22 @@ __pycache__/
 *.pyc
 ~$*.docx
 .git_ssh/
+
+# Historical low-score registration outputs kept out of GitHub sync.
+darklight_mm5/calibration_only_method/outputs/
+darklight_mm5/calibration_only_method/outputs_phase20_canvas/
+darklight_mm5/calibration_only_method/outputs_phase21_canvas/
+darklight_mm5/calibration_only_method/outputs_phase22_stereo_recalib/
+darklight_mm5/calibration_only_method/outputs_phase23_lwir_board_offset/
+darklight_mm5/calibration_only_method/outputs_phase24_lwir_board_affine/
+darklight_mm5/outputs/
+darklight_mm5/outputs_calibration_plane/
+darklight_mm5/outputs_calibration_plane_boundary/
+darklight_mm5/outputs_calibration_plane_opt/
+darklight_mm5/teacher_residual_method/
+darklight_mm5/README.md
+darklight_mm5/calibration_plane_config.json
+darklight_mm5/calibration_plane_flowchart.md
+darklight_mm5/make_acceptance_report.py
+darklight_mm5/optimize_calibration_plane.py
+darklight_mm5/run_calibration_plane.py
