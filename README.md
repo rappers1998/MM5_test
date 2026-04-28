@@ -488,22 +488,6 @@ Phase30 后，输出文件使用短前缀区分来源：
 - `docs/manifests/rename_manifest_20260428.csv`
 - `docs/manifests/document_reorg_manifest_20260428.csv`
 
-## GitHub 同步边界
-
-本仓库同步当前项目内容，但以下内容按 `.gitignore` 排除：
-
-- `.venv/`
-- `.git_ssh/`
-- `__pycache__/`
-- `*.pyc`
-- Office 临时文件 `~$*.docx`
-- Vitis HLS 本地生成工程和 build 产物：
-  - `peizhun_jiguang/hls/laser_fusion_prj/`
-  - `peizhun_jiguang/hls/laser_fusion_synth_prj/`
-  - `peizhun_jiguang/hls/laser_range_synth_prj/`
-  - `peizhun_jiguang/hls/manual_build/`
-
-这样 GitHub 上保存的是可阅读、可复现、可继续开发的项目内容，而不是本地虚拟环境、临时构建缓存或私有 Git helper。
 
 ## 当前开发路线
 
