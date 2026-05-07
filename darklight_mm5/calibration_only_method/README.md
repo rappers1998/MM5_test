@@ -1,106 +1,84 @@
-# Phase25 Depth-Assisted MM5 Registration
+# Calibration-Only MM5 Registration
 
-本目录保存当前效果最好的 MM5 calibration-only 配准方案。它的目标是：只使用用户自己的标定数据、raw RGB/LWIR/depth 图像和原始棋盘格采集，生成尽量接近 MM5 official aligned 水平的 RGB/LWIR 配准结果。
+This directory contains the strict calibration-only MM5 registration path. The current accepted package is Phase29 v9 with the `support-v9` strict support-gated grid. Phase28, Phase25, and earlier Phase29 versions remain as source/provenance history, while their generated output bodies are no longer part of the active acceptance workspace.
 
-更多项目级说明见根目录 [README](../../README.md)。
+## Current Path
 
-## 数据边界
+```text
+phase29/run_phase29.py
+```
 
-生成阶段允许使用：
+Recommended evidence:
 
-- `../../calibration/` 中的 MM5 标定文件；
-- MM5 index 指向的 raw RGB1、raw LWIR16、raw depth 图像；
-- 原始 calibration-board captures；
-- 从原始数据和标定数据计算出的棋盘格角点、board correspondence、depth foreground boundary。
+- `phase29/README.md`
+- `phase29/outputs_broad_generalization_v9/reports/p29_broad_generalization_report.md`
+- `phase29/outputs_broad_generalization_v9/five_panels/`
+- `phase29/outputs_broad_generalization_v9/acceptance_summary_panels/`
+- `phase29/outputs_broad_generalization_v9/oracle_ceiling_panels/`
+- `phase29/outputs_broad_generalization_v9/reliability_maps/`
+- `phase29/outputs_broad_generalization_v9/selector_debug/`
+- `phase29/README.md` for superseded method history
+- `phase28/README.md`
 
-生成阶段不允许使用：
+## Data Boundary
 
-- MM5 aligned RGB/T16 作为参数来源；
-- teacher residual、official aligned transform、aligned template 等从参考结果反推的参数；
-- 针对单张图读取 aligned 后做 per-sample fitting 或调参。
+Generation and selection may use:
 
-MM5 aligned 图像只在评估阶段读取，用来报告 NCC、edge distance 等指标。
+- MM5 calibration files under `../../calibration/`;
+- raw RGB1, raw LWIR16, and raw depth from the MM5 index;
+- original calibration-board captures;
+- calibration-derived board correspondences, depth support, anti-ghost masks, and risk maps.
 
-## 运行入口
+Generation and raw-only selection must not use:
 
-在仓库根目录运行：
+- MM5 aligned RGB/T16 as a parameter source;
+- teacher residuals, official aligned transforms, or aligned templates;
+- per-sample fitting that reads aligned images.
+
+Aligned images are evaluation-only for NCC, edge distance, heatmaps, candidate ceiling, and acceptance comparisons.
+
+## Results
+
+| Version | core | review | broad |
+|---|---:|---:|---:|
+| Phase28 baseline | `3/3` | `7/7` | `11/18`, edge mean/max `2.8978 / 5.4010 px` |
+| Phase29 v3 | `3/3` | `7/7` | `13/18`, edge mean/max `2.7976 / 4.7836 px` |
+| Phase29 v4 | `3/3` | `7/7` | `15/18`, edge mean/max `2.7202 / 4.7836 px` |
+| Phase29 v5 | `3/3` | `7/7` | `15/18`, edge mean/max `2.7202 / 4.7836 px` |
+| Phase29 v6 acceptance-lite | `3/3` | `7/7` | `15/18`, edge mean/max `2.6283 / 4.7164 px`, `13` candidates/sample |
+| Phase29 v9 support-gated | `3/3`, edge mean/max `1.7249 / 1.8926 px` | `7/7`, edge mean/max `1.6379 / 2.7155 px` | `18/18`, edge mean/max `2.2408 / 2.9714 px`, `22` candidates/sample |
+
+Phase29 v9 selected improved/regressed count on broad is `8 / 0`. It solves the previous broad failures `050`, `110`, and `123`, and also keeps `187` under `3 px`, by using raw/depth support-gated LWIR evidence rather than pretending unreliable background thermal edges are valid.
+
+## Reproduce
 
 ```powershell
-python .\darklight_mm5\calibration_only_method\run_phase25_depth_assisted.py --aligned-ids 106,104,103
+python .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --run-profile core --candidate-grid support-v9 --version-label v9 --selector-version v6 --output .\darklight_mm5\calibration_only_method\phase29\outputs_core_generalization_v9 --report-level research --save-selector-debug
+python .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --run-profile review --candidate-grid support-v9 --version-label v9 --selector-version v6 --output .\darklight_mm5\calibration_only_method\phase29\outputs_review_generalization_v9 --report-level research --save-selector-debug
+python .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --run-profile broad --candidate-grid support-v9 --version-label v9 --selector-version v6 --output .\darklight_mm5\calibration_only_method\phase29\outputs_broad_generalization_v9 --report-level research --save-selector-debug
 ```
 
-当前验证样本：
+## Kept Structure
 
-```text
-106,104,103
-```
+| Path | Status |
+|---|---|
+| `phase29/` | Current strict broad-generalization and support-gated acceptance version. |
+| `phase28/` | Historical visual baseline and helper code imported by Phase29. |
+| `run_phase25_edge_optimization.py` | Helper reused by Phase28/29. |
+| `run_phase25_depth_assisted.py` | Phase25 geometry provenance helper. |
+| `run_phase21_canvas_optimization.py` to `run_phase24_lwir_board_affine.py` | Calibration and board-affine helpers. |
+| `run_calibration_only.py`, `diagnose_aligned_canvas.py` | Historical diagnostic entrypoints. |
 
-输出目录：
+Generated outputs kept for active acceptance are limited to Phase29 v9 core/review/broad. Superseded output bodies from Phase25, Phase28, Phase29 v3-v8, temporary v9 probes, and older diagnostics are deleted after their metrics and lessons are recorded in README/planning logs.
 
-```text
-darklight_mm5/calibration_only_method/outputs_phase25_depth_assisted/
-```
+## Historical Notes
 
-最终推荐 candidate：
-
-```text
-phase25_depth_registered_global_shift_depth_fill
-```
-
-## 方法流程
-
-Phase25 在前几个稳定阶段上继续推进：
-
-1. 保留 `run_phase21_canvas_optimization.py` 得到的 RGB canvas，使 RGB 对 MM5 aligned RGB 的 NCC 保持 `0.9865 / 0.9724`。
-2. 复用 `run_phase23_lwir_board_offset.py` 的 LWIR crop offset `(280,115)`。
-3. 复用 `run_phase24_lwir_board_affine.py` 从 `1848` 个 checkerboard correspondence points 拟合出的 `affine_lmeds` LWIR residual transform。
-4. 在 `run_phase25_depth_assisted.py` 中把 raw depth 裁剪到固定 RGB canvas。
-5. 使用 `depth < 1000 mm` 提取近景 foreground boundary。
-6. 在 `2 px` 半径内搜索一个三张图共享的 LWIR residual translation。
-7. 用 depth-boundary-to-LWIR-edge distance 选择 `dx=-2 px, dy=+2 px`。
-8. 应用 residual shift 后，只用 dense raw-depth LWIR projection 填补新产生的边界无效区。
-
-这里的 depth 不是单纯用于补洞；它参与 residual registration 参数选择，所以 Phase25 是真正的 depth-assisted registration。
-
-## 当前三张测试图结果
-
-| Candidate | RGB NCC mean/min | LWIR NCC mean/min | LWIR edge distance mean |
-|---|---:|---:|---:|
-| Phase24 baseline | `0.9865 / 0.9724` | `0.9182 / 0.9118` | `15.2661 px` |
-| Phase25 depth registration only | `0.9865 / 0.9724` | `0.9237 / 0.9174` | `16.9251 px` |
-| Phase25 promoted | `0.9865 / 0.9724` | `0.9321 / 0.9261` | `14.8499 px` |
-
-对照 retained bridge target：
-
-```text
-LWIR NCC mean/min = 0.9233 / 0.9064
-```
-
-Phase25 promoted 在三张测试图上超过 retained bridge target，同时保持 aligned 图像 evaluation-only。
-
-## 输出文件
-
-- [`reports/dl_p25_report_p25.md`](outputs_phase25_depth_assisted/reports/dl_p25_report_p25.md): 运行报告，适合先读。
-- [`metrics/dl_p25_sum_p25.csv`](outputs_phase25_depth_assisted/metrics/dl_p25_sum_p25.csv): 候选方法 summary。
-- [`metrics/dl_p25_sum_p25.json`](outputs_phase25_depth_assisted/metrics/dl_p25_sum_p25.json): 同一份 summary 的 JSON 版本。
-- [`metrics/dl_p25_met_p25.csv`](outputs_phase25_depth_assisted/metrics/dl_p25_met_p25.csv): 逐样本、逐 candidate 指标明细。
-- [`metrics/dl_p25_score_p25.csv`](outputs_phase25_depth_assisted/metrics/dl_p25_score_p25.csv): depth boundary 选择 residual shift 的评分。
-- [`metrics/dl_p25_board_pts.csv`](outputs_phase25_depth_assisted/metrics/dl_p25_board_pts.csv): 棋盘格 correspondence 点。
-- [`metrics/dl_p25_board_tf.csv`](outputs_phase25_depth_assisted/metrics/dl_p25_board_tf.csv): board-derived transform 记录。
-- [`panels/`](outputs_phase25_depth_assisted/panels/): 三张样本的可视化对照图。
-
-## 关键脚本
-
-- [`run_phase25_depth_assisted.py`](run_phase25_depth_assisted.py): 当前最佳方法入口。
-- [`run_phase24_lwir_board_affine.py`](run_phase24_lwir_board_affine.py): Phase25 复用的 checkerboard-derived LWIR affine helper。
-- [`run_phase23_lwir_board_offset.py`](run_phase23_lwir_board_offset.py): LWIR board offset helper。
-- [`run_phase22_stereo_recalib.py`](run_phase22_stereo_recalib.py): stereo recalibration helper。
-- [`run_phase21_canvas_optimization.py`](run_phase21_canvas_optimization.py): RGB canvas helper。
-- [`run_calibration_only.py`](run_calibration_only.py): 早期 calibration-only baseline。
-- [`diagnose_aligned_canvas.py`](diagnose_aligned_canvas.py): aligned canvas 诊断脚本。
-
-## 当前结论
-
-Phase25 的重点不是追求大规模全数据集运行，而是在三张指定样本上验证：在 RGB 不退化的前提下，LWIR 可以通过用户标定数据、棋盘格几何和 raw depth boundary 进一步靠近 official aligned 水平。
-
-后续如果继续优化，应优先沿着 Phase25 的 depth-assisted residual registration 做小范围增量验证，而不是回到 teacher/aligned-derived 调参路线。
+| Version | Outcome |
+|---|---|
+| Phase25 | Calibration-only depth-assisted foundation; useful for geometry and helper functions, not final acceptance. |
+| Phase28 | Stable visual baseline; broad `11/18`, edge mean/max `2.8978 / 5.4010 px`. |
+| Phase29 v3 | First honest broad-generalization selector; broad `13/18`. |
+| Phase29 v4/v5 | Broad `15/18`; v5 added explainability/reliability evidence. |
+| Phase29 v6 acceptance-lite | Best compact pre-v9 selector; broad `15/18`, edge mean/max `2.6283 / 4.7164 px`. |
+| Phase29 v7/v8 | Rejected research probes; larger/component candidate pools did not promote safely. |
+| Phase29 v9 | Current support-gated acceptance package; broad `18/18`, edge mean/max `2.2408 / 2.9714 px`. |

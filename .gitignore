@@ -17,3 +17,6 @@ peizhun_jiguang/hls/manual_build/
 
 # Transient logs
 *.log
+
+# Local brainstorming visual companion screens
+.superpowers/

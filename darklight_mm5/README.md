@@ -1,125 +1,63 @@
-# Dark-Light MM5 RGB1 + LWIR Calibration and Fusion
+# Dark-Light MM5 Workspace
 
-This is the cleaned current version of the MM5 dark-light RGB1 + LWIR calibration/fusion experiment.
-Rejected previous outputs and tuning artifacts have been removed from the active workspace.
+This workspace contains MM5 RGB/LWIR/depth registration, fusion, and evaluation work.
 
-## Current Method
+## Current Mainline
 
-Use synchronized frame-1 raw inputs from:
+| Route | Entry | Purpose |
+|---|---|---|
+| Phase29 v9 support-gated | `calibration_only_method/phase29/` | Current strict raw/calibration/depth broad-generalization acceptance package. |
+| Phase28 | `calibration_only_method/phase28/` | Historical stable visual baseline and helper code for Phase29. |
+| Phase25 helpers | `calibration_only_method/run_phase25_depth_assisted.py` and `run_phase25_edge_optimization.py` | Geometry/depth helper provenance reused by later phases. |
 
-```text
-mm5_calib_benchmark/outputs/mm5_benchmark/splits/index_with_splits.csv
-```
+Phase29 generation and selection use calibration files, raw RGB, raw LWIR, raw depth, calibration-board geometry, and raw/depth support masks only. MM5 aligned RGB/T16 are evaluation-only.
 
-Main input fields:
-
-```text
-raw_rgb1_path        -> dark/synchronized visible frame
-raw_thermal16_path  -> synchronized LWIR frame
-raw_rgb3_path        -> bright visible reference for visualization only
-```
-
-The recommended method is the optimized `calibration_plane`:
+## Phase29 v9 Snapshot
 
 ```text
-calibration/def_stereocalib_THERM.yml
-raw_rgb1_path
-raw_thermal16_path
+calibration_only_method/phase29/outputs_core_generalization_v9/
+calibration_only_method/phase29/outputs_review_generalization_v9/
+calibration_only_method/phase29/outputs_broad_generalization_v9/
 ```
 
-It maps raw LWIR onto the raw RGB1 canvas with a calibrated scene-plane homography for stable visual alignment.
+| Profile | Result |
+|---|---:|
+| core | `3/3` pass, edge mean/max `1.7249 / 1.8926 px` |
+| review | `7/7` pass, edge mean/max `1.6379 / 2.7155 px` |
+| broad | `18/18` pass, edge mean/max `2.2408 / 2.9714 px`, improved/regressed `8 / 0`, `22` candidates/sample |
 
-Selected optimized parameters:
+The previous broad failures `050`, `110`, and `123` now pass under the strict selected path. This remains an honest support-gated registration/evidence method, not a full-scene thermal reconstruction claim.
 
-```text
-lwir_calib_size = 1280x720
-plane_depth_mm = 325
-t_scale = 1.45
-lwir_principal_offset = 14,0
-max_residual_shift = 2
-fusion_saliency_sigma = 15
-fusion_alpha_low = 40
-fusion_alpha_high = 96
-fusion_alpha_scale = 0.82
-fusion_alpha_max = 0.72
-fusion_roi_dilate_px = 3
-```
+## Review First
 
-Parameter record:
+| Path | Purpose |
+|---|---|
+| `calibration_only_method/phase29/outputs_broad_generalization_v9/five_panels/` | Five-panel visual acceptance images. |
+| `calibration_only_method/phase29/outputs_broad_generalization_v9/acceptance_summary_panels/` | Main visual acceptance panels. |
+| `calibration_only_method/phase29/outputs_broad_generalization_v9/reliability_maps/` | Reliability/risk overlays. |
+| `calibration_only_method/phase29/outputs_broad_generalization_v9/hard_ceiling_panels/` | Selected-vs-best-strict evidence. |
+| `calibration_only_method/phase29/outputs_broad_generalization_v9/reports/` | Markdown acceptance reports. |
+| `calibration_only_method/phase29/README.md` | Superseded Phase29 method memory and reproduce commands. |
 
-```text
-darklight_mm5/calibration_plane_config.json
-```
-
-## Run
-
-Run the optimized current version on the three dark samples:
+## Reproduce
 
 ```powershell
-python .\darklight_mm5\run_calibration_plane.py --output .\darklight_mm5\outputs_calibration_plane_opt --aligned-ids 106,104,103
+python .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --run-profile core --version-label v9 --selector-version v6 --candidate-grid support-v9 --output .\darklight_mm5\calibration_only_method\phase29\outputs_core_generalization_v9 --report-level research --save-selector-debug
+python .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --run-profile review --version-label v9 --selector-version v6 --candidate-grid support-v9 --output .\darklight_mm5\calibration_only_method\phase29\outputs_review_generalization_v9 --report-level research --save-selector-debug
+python .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --run-profile broad --version-label v9 --selector-version v6 --candidate-grid support-v9 --output .\darklight_mm5\calibration_only_method\phase29\outputs_broad_generalization_v9 --report-level research --save-selector-debug --save-edge-debug
 ```
 
-The original official aligned images are kept only as an evaluation reference under `darklight_mm5/outputs`.
-The previous accepted baseline is still kept under `darklight_mm5/outputs_calibration_plane`.
+## Folder Policy
 
-To reproduce the boundary/parameter search:
+The active workspace keeps only the Phase29 v9 generated output bodies needed for acceptance: core, review, and broad. Superseded generated folders from Phase25, Phase28, Phase29 v3-v8, temporary v9 probes, teacher residuals, calibration-plane experiments, benchmark method outputs, and local HLS builds are disposable after their conclusions are recorded in README/planning logs.
 
-```powershell
-python .\darklight_mm5\optimize_calibration_plane.py --output .\darklight_mm5\outputs_calibration_plane_opt --diagnostic-output .\darklight_mm5\outputs_calibration_plane_boundary
-```
+## Version Memory
 
-## Current Samples
-
-| aligned_id | sequence | split | raw RGB1 mean |
-|---:|---:|---|---:|
-| 106 | 388 | test | 1.77 |
-| 104 | 386 | val | 1.90 |
-| 103 | 385 | test | 1.93 |
-
-## Main Outputs
-
-Five-panel review:
-
-```text
-darklight_mm5/outputs_calibration_plane_opt/five_panels/*_five_panel.png
-```
-
-Each five-panel image contains:
-
-```text
-RGB1 Raw dark/synced
-RGB3 Raw bright reference
-LWIR Raw normalized
-LWIR -> RGB1 calibration plane
-Fused Result
-```
-
-Detailed per-sample outputs:
-
-```text
-darklight_mm5/outputs_calibration_plane_opt/samples/<aligned_id>_seq<sequence>/
-```
-
-Metrics:
-
-```text
-darklight_mm5/outputs_calibration_plane_opt/metrics/dl_opt_met_sample.csv
-darklight_mm5/outputs_calibration_plane_opt/metrics/dl_opt_met_reg_stage.csv
-darklight_mm5/outputs_calibration_plane_opt/metrics/dl_opt_met_fusion.csv
-darklight_mm5/outputs_calibration_plane_opt/dl_opt_eval_sum.json
-darklight_mm5/outputs_calibration_plane_opt/dl_opt_eval_ref.csv
-darklight_mm5/outputs_calibration_plane_boundary/dl_bnd_opt_resid.csv
-darklight_mm5/outputs_calibration_plane_boundary/*_boundary_panel.png
-```
-
-## Evaluation Meaning
-
-- `ncc`: normalized cross correlation, higher is better.
-- `edge_distance`: mean distance from moving edges to fixed edges, lower is better.
-- `valid_ratio`: valid warped area ratio.
-- `fusion_entropy_gain_vs_raw_rgb`: display/detail gain from the fusion visualization.
-- `target_*`: comparison against the retained `official_reference` result, used only for evaluation.
-
-## Caveat
-
-The fused image is a diagnostic/display fusion. It includes low-light enhancement and thermal saliency injection, so use the registration metrics and valid masks to judge calibration quality separately from visual brightness.
+| Version | Memory |
+|---|---|
+| Phase28 | Stable visual baseline; broad `11/18`, edge mean/max `2.8978 / 5.4010 px`. |
+| Phase29 v3 | Honest first broad version; broad `13/18`. |
+| Phase29 v4/v5 | Broad `15/18`; v5 added reliability maps, hard-ceiling labels, and selector explanations. |
+| Phase29 v6 acceptance-lite | Compact pre-v9 selector; broad `15/18`, edge mean/max `2.6283 / 4.7164 px`. |
+| Phase29 v7/v8 | Rejected research probes; large/component pools were unstable or insufficient. |
+| Phase29 v9 | Current accepted support-gated method; broad `18/18`, edge mean/max `2.2408 / 2.9714 px`. |

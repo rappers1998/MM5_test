@@ -1,2 +1,0 @@
-chosen=normal
-recommended_invert_rt=0

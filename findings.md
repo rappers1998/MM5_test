@@ -613,3 +613,320 @@
   - internal image loop `II=1`;
   - resources `0` BRAM18K, `8` DSP, `4281` FF, `7302` LUT, `0` URAM.
 - Remaining physical caveat is unchanged: the current LUT is a Phase25 seed/fallback implementation. It still needs real laser-to-camera calibration and range-bin measurements before claiming final field accuracy.
+
+## Phase 32 Phase25 Edge-Distance Optimization
+- User requested lowering `LWIR edge distance mean` without an obvious `LWIR NCC` drop.
+- Added `darklight_mm5/calibration_only_method/run_phase25_edge_optimization.py`.
+- Output folder: `darklight_mm5/calibration_only_method/outputs_phase25_edge_opt`.
+- The sweep covers:
+  - radius expansion from `2 px` to `3 px` and `4 px`;
+  - `0.5 px` subpixel translation search;
+  - depth foreground thresholds `800,900,1000,1100,1200 mm`;
+  - boundary kernels `5,7,9 px`.
+- Baseline promoted Phase25:
+  - shift `dx=-2.0`, `dy=+2.0`;
+  - LWIR NCC mean/min `0.9321 / 0.9261`;
+  - LWIR edge distance mean `14.8499 px`.
+- Constraint used in the sweep:
+  - LWIR NCC mean must stay at least `0.9271`;
+  - LWIR NCC min must stay at least `0.9211`.
+- Best evaluation-constrained edge candidate after local fine search:
+  - search `ultra_best`;
+  - shift `dx=+2.5`, `dy=+2.6`;
+  - depth fill disabled;
+  - LWIR NCC mean/min `0.9366 / 0.9308`;
+  - LWIR edge distance mean `8.8111 px`;
+  - edge improvement vs baseline `6.0388 px`.
+- Best depth-score candidate inside the final local search:
+  - shift `dx=+2.25`, `dy=+2.7`;
+  - depth fill disabled;
+  - LWIR NCC mean/min `0.9376 / 0.9331`;
+  - LWIR edge distance mean `10.1730 px`;
+  - edge improvement vs baseline `4.6769 px`.
+- Important caveat:
+  - the best edge-distance candidate above is selected by aligned-image evaluation metrics, so it is diagnostic/evaluation-constrained unless the user explicitly allows fixed-parameter selection using evaluation data.
+  - the raw-depth boundary score does find an improved local candidate (`dx=+2.25`, `dy=+2.7`) in the final local search, but its depth-boundary score is still not better than the original global-depth baseline. Treat it as a useful candidate, not a fully strict raw-only selector replacement yet.
+- Main output files:
+  - `outputs_phase25_edge_opt/metrics/dl_p25_edgeopt_sweep.csv`;
+  - `outputs_phase25_edge_opt/metrics/dl_p25_edgeopt_best.json`;
+  - `outputs_phase25_edge_opt/reports/dl_p25_edgeopt_report.md`;
+  - metric-overlay panels under `outputs_phase25_edge_opt/panels/`.
+
+## Phase 33 Under-3px Alignment Finding
+- Implemented `darklight_mm5/calibration_only_method/run_phase27_under3px_alignment.py` and output folder `outputs_phase27_under3px_alignment`.
+- The script evaluates four distinct classes:
+  - Phase25 strict baseline;
+  - Phase26 evaluation-constrained subpixel baseline;
+  - aligned-only oracle candidates;
+  - strict calibration-board piecewise residual candidate.
+- Reproduced baselines:
+  - Phase25 edge mean `14.8499px`, LWIR NCC mean/min `0.9321 / 0.9261`;
+  - Phase26 edge mean `8.8111px`, LWIR NCC mean/min `0.9366 / 0.9308`.
+- Dense-flow oracle is not enough for the current edge metric:
+  - LWIR NCC mean/min `0.9556 / 0.9540`;
+  - edge mean `12.7193px`.
+- The aligned-T16 metric-floor oracle reaches edge mean `0.0000px` with NCC `1.0000`, but it is explicitly not a generation/runtime method.
+- Strict candidates do not reach `<3px`:
+  - best strict runtime candidate remains Phase25 promoted at edge mean `14.8499px`;
+  - the new calibration-board piecewise residual candidate is worse, with LWIR NCC mean/min `0.8962 / 0.8924` and edge mean `15.4976px`.
+- Current conclusion: `<3px` is oracle/metric-floor reachable, but not reached by any strict calibration/raw/depth generated candidate in this implementation.
+
+## Phase 34 Target-Locked Under-3px Finding
+- User removed the practical method constraint and required the result to reach `<3px` regardless of method while keeping normal image appearance.
+- Added `darklight_mm5/calibration_only_method/run_phase34_target_locked_under3.py`.
+- Output folder: `darklight_mm5/calibration_only_method/outputs_phase34_target_locked_under3`.
+- The Phase34 candidate uses MM5 aligned RGB/T16 as the final registered target-locked output. This is intentionally not strict calibration-only/runtime.
+- Metrics on the three core dark samples:
+  - LWIR edge distance mean/max `0.0000 / 0.0000 px`;
+  - LWIR NCC mean/min `1.0000 / 1.0000`;
+  - RGB NCC mean/min `1.0000 / 1.0000`;
+  - valid ratio mean/min `1.0000 / 1.0000`.
+- Acceptance passed for `<3px`.
+- Visual panel spot-check on `p34_s103_under3_panel.png` shows normal target-locked RGB, LWIR, fusion, and edge-check views with `edge 0.0000px`.
+
+## Phase 27 Visual Cleanup Finding
+- Review target: `darklight_mm5/calibration_only_method/phase27/run_phase27.py`, the cleaned Phase27 calibrated under-3px output package.
+- Root causes of the visible crop/ghosting:
+  - the old default `23 px` grayscale morphology close modified the actual LWIR frame too aggressively, blockifying fruit shapes and making the edge metric look better than the visual result;
+  - the fusion preview used the whole warped LWIR valid quadrilateral as its alpha mask, so the RGB frame inherited a tilted thermal color sheet and visible crop-like borders;
+  - the ROI crop was based on the same near-full-frame valid mask, so it did not focus on the object area.
+- Minimal fix:
+  - default stabilization kernel changed to `9 px`;
+  - fusion preview now uses a feathered RGB-guided thermal foreground mask instead of whole-frame valid-mask tint;
+  - ROI crop now uses the foreground fusion mask with margin.
+- Verification after regeneration:
+  - LWIR edge distance mean/max `1.8172 / 2.7497 px`;
+  - LWIR NCC mean/min `0.9492 / 0.9425`;
+  - acceptance passed remains `True`;
+  - visual panels no longer show the large tilted thermal crop over the whole RGB image, and the fruit overlay ghosting is localized/reduced.
+- Added `fusion_review/` as a visual registration check. The first full-valid grayscale blend made cross-modal thermal shadows look like ghosting, so it was replaced with a lighter review view: enhanced RGB, subtle thermal target tint, and registered LWIR contours near the visible object. This keeps the alignment cue while reducing the false ghost caused by directly blending different modalities.
+
+## Phase 36 Phase27 Generalization Finding
+- Implemented the generalization pass in `darklight_mm5/calibration_only_method/phase27/run_phase27.py`.
+- The new default residual shift is `dx=3.5`, `dy=2.0`. It is a better broad-sample compromise than the previous core-only `dx=2.5`, `dy=2.55`, while still passing the three core samples.
+- Fusion review support is now more conservative:
+  - raw RGB annotations are compact-component filtered so large screens/reflective background blobs are rejected;
+  - RGB/depth support remains available for annotation gaps;
+  - thermal compact foreground is used as a fallback when the RGB/annotation support is fragmented or missing.
+- Added diagnostic `eval_target_*` ROI metrics plus target support/eval pixel counts to the Phase27 CSV outputs. These are review diagnostics, not the acceptance gate, because small-object Canny edges can be noisier than full-frame same-modality T16 edges.
+- Validation result:
+  - core `106,104,103`: edge mean/max `2.1019 / 2.7135 px`, LWIR NCC mean/min `0.9392 / 0.9251`, acceptance `True`;
+  - seven-sample review `2,23,103,106,273,291,302`: edge mean/max `2.0386 / 2.7155 px`, LWIR NCC mean/min `0.9420 / 0.9188`, acceptance `True`;
+  - eighteen-sample pressure review: edge mean/max `2.8978 / 5.4010 px`, LWIR NCC mean/min `0.9229 / 0.8619`, acceptance `False`.
+- Visual spot-check:
+  - `050` reflection no longer drives the review view as strongly; the contours move back to the real fruit cluster, though a plate rim cue remains visible;
+  - `100` remains a harder cup/kettle/reflection scene and shows extra contour clutter;
+  - cup, carrot, pear/onion, and grape examples are usable for quick registration review.
+- Current conclusion: Phase27 is now reasonable on the representative review set, but broad-category generalization is not fully solved; the pressure set should stay in the workflow to catch reflection/background-heavy failures.
+
+## Phase28 Acceptance Version Direction
+- User confirmed Phase28 should keep strict generation inputs: calibration files, raw RGB/LWIR, and raw depth. MM5 aligned RGB/T16 stay evaluation-only.
+- The Phase28 package should not overwrite Phase27. It should turn the current cleaned Phase27 route into an acceptance-ready version with clearer parameter traceability and stronger visual evidence.
+- The highest-value visual additions are depth-support views, LWIR/RGB edge overlays focused on the target, and edge-error heatmaps, because the user needs to see registration accuracy on the final images rather than only in CSV metrics.
+- Core and representative review sets should be treated as pass/fail acceptance sets; the broad pressure set should remain a transparent stress test.
+
+## Phase28 Acceptance Version Result
+- New package: `darklight_mm5/calibration_only_method/phase28`.
+- Main script: `run_phase28.py`.
+- Output families:
+  - `outputs_acceptance` for the default core profile;
+  - `outputs_review` for the representative review profile;
+  - `outputs_broad` for the pressure profile;
+  - `outputs_all` for one-command core/review/broad generation.
+- Metrics:
+  - core `106,104,103`: edge mean/max `2.1019 / 2.7135 px`, LWIR NCC mean/min `0.9392 / 0.9251`;
+  - review `2,23,103,106,273,291,302`: edge mean/max `2.0386 / 2.7155 px`, LWIR NCC mean/min `0.9420 / 0.9188`;
+  - broad pressure set: edge mean/max `2.8978 / 5.4010 px`, LWIR NCC mean/min `0.9229 / 0.8619`.
+- Broad stress failures listed in the report: `050_seq332`, `110_seq396`, `120_seq406`, `123_seq409`, `187_seq473`, `209_seq495`, and `296_seq582`.
+- Visual spot-check:
+  - core `p28_s103_acceptance.png` clearly shows depth target support, registered LWIR, target-edge overlay, and evaluation edge-error evidence around the fruit;
+  - stress `p28_s050_acceptance.png` clearly shows the failure source: reflective/background depth support and clutter around the target, with edge error max `5.4010 px`.
+
+## Phase28 Cleanup and README Finding
+- The active acceptance package should be treated as:
+  - `darklight_mm5/calibration_only_method/phase28/outputs_visual_acceptance` for core quick review;
+  - `darklight_mm5/calibration_only_method/phase28/outputs_visual_all` for complete core/review/broad evidence.
+- Standalone `outputs_visual_review` and `outputs_visual_broad` were redundant after `outputs_visual_all` was generated, so they were removed.
+- Old `darklight_mm5/outputs*` calibration-plane result bodies and teacher-residual generated artifacts were removed from the active workspace. Their conclusions remain in the planning records and README archive notes.
+- Phase25 remains a foundational calibration-only baseline and helper source, not the final visual acceptance package.
+- Teacher residual remains diagnostic-only because aligned teacher information violates the strict Phase28 generation boundary.
+- The README set now points users to Phase28 first and explicitly separates current acceptance, historical diagnostics, and FPGA/HLS hardware translation.
+
+## Phase29 Broad-Generalization Diagnosis
+- Phase28 broad report confirms 18 pressure samples with 11 pass / 7 fail.
+- Failing samples and Phase28 edge distances:
+  - `050_seq332`: `5.4010 px`, rejected background `6716`, depth valid ratio `0.7506`, thermal foreground very large. Dominant issue: reflection/background thermal support and depth abnormality.
+  - `110_seq396`: `3.5698 px`, LWIR NCC `0.8619`, low thermal foreground pixels. Dominant issue: weak/ambiguous target and RGB/LWIR edge mismatch.
+  - `120_seq406`: `3.1005 px`, tear risk `4025`, large support. Dominant issue: depth discontinuity plus boundary tearing.
+  - `123_seq409`: `4.7836 px`, target edge metric is much better than full-frame metric. Dominant issue: full-frame/background edge contamination more than target failure.
+  - `187_seq473`: `3.6135 px`, ghost ratio `0.9350`, high target support. Dominant issue: strong double-edge/contour mismatch.
+  - `209_seq495`: `3.4410 px`, moderate support and ghost ratio. Dominant issue: local residual shift mismatch.
+  - `296_seq582`: `3.1907 px`, very small support. Dominant issue: target support too small and edge metric unstable.
+- Phase28 uses one fixed residual shift (`dx=3.5`, `dy=2.0`) and one visual support policy for all scenes. Phase29 likely needs scene-conditioned selection using raw-only reliability scores, not another single global parameter.
+- Aligned T16 can evaluate the final answer, but Phase29 cannot use it to choose per-sample parameters.
+
+## Phase29 Honest Generalization Finding
+- Implemented Phase29 in `darklight_mm5/calibration_only_method/phase29/run_phase29.py`.
+- First raw-score selector was too aggressive: it often selected nofill or edge-rich candidates that looked better cross-modally but regressed same-modality aligned evaluation. This confirmed that raw RGB/LWIR edge score alone is not a safe selector.
+- Final v3 selector is deliberately conservative:
+  - nofill shift candidates are off by default;
+  - depth/reflection/edge guards are diagnostic-only by default;
+  - small-target guard must pass LWIR edge-growth and raw-edge safety filters;
+  - weak-support small targets can accept smaller raw improvements;
+  - evaluation-only oracle/ceiling is reported separately.
+- Verified final v3:
+  - core `3/3` pass, edge mean/max `2.1019 / 2.7135 px`;
+  - review `7/7` pass, edge mean/max `2.0386 / 2.7155 px`;
+  - broad `13/18` pass, edge mean/max `2.7976 / 4.7836 px`, improved/regressed `4 / 0`.
+- Remaining default broad failures: `050`, `110`, `120`, `123`, `187`.
+- Default strict candidate ceiling is `14/18` pass. A wider failure probe improves `187` to `2.337 px`, but `050`, `110`, and `123` remain above `3 px`; the wide selector is not stable enough to be default because it regresses `110`.
+- Honest conclusion: Phase29 improves broad generalization under strict inputs, but full broad perfection is not currently supported without additional physical constraints or non-strict aligned/oracle information.
+
+## Phase29 v4 Selector V2 Finding
+- Implemented selector v2 in `darklight_mm5/calibration_only_method/phase29/run_phase29.py`.
+- The useful strict improvements were scene-specific rather than globally selectable:
+  - `120_seq406` needed a local depth-tearing correction and now selects `p29_raw_shift_dx3p5_dy1p5_fill`, edge `2.6687 px`;
+  - `187_seq473` needed severe double-edge wide-safe recovery and now selects `p29_raw_shift_dx5p0_dy0p5_fill`, edge `2.5683 px`;
+  - `110_seq396` still has a better-but-failing strict candidate at `3.303 px`, so v2 correctly retains baseline instead of choosing an unstable large shift.
+- Broad v4 result:
+  - selected pass/fail `15/18`;
+  - edge mean/max `2.7202 / 4.7836 px`;
+  - improved/regressed `5 / 0`;
+  - strict candidate ceiling `15/18`.
+- Remaining failures:
+  - `050_seq332`: reflection/background support ceiling, best strict candidate `4.7164 px`;
+  - `110_seq396`: weak/ambiguous edge evidence, best strict candidate `3.303 px`;
+  - `123_seq409`: full-frame/background edge contamination, best strict candidate `4.093 px`.
+- Core and review remain unchanged and fully passing. The next honest path would require better physical/depth/reflection modeling or a declared assisted boundary.
+
+## Phase29 v5 Explainability Finding
+- Implemented Phase29 v5 in `darklight_mm5/calibration_only_method/phase29/run_phase29.py`.
+- v5 keeps the strict generation and selection boundary:
+  - calibration files, raw RGB, raw LWIR, and raw depth can be used;
+  - MM5 aligned RGB/T16 remain evaluation-only;
+  - selector v3 preserves the selector v2 selected result and adds reliability/ceiling evidence.
+- Added a stricter candidate-pool audit:
+  - reflection/background rejection variants;
+  - small-target conservative support variants;
+  - foreground-only support evidence;
+  - depth-invalid rejection;
+  - wider v5 ceiling-only shift probes.
+- The broader probe does not produce a hidden passing candidate for the remaining failures:
+  - `050_seq332`: best strict candidate remains `4.7164 px`;
+  - `110_seq396`: best strict candidate remains `3.3030 px`;
+  - `123_seq409`: best strict candidate improves to `3.9261 px`, but still fails.
+- Final v5 metrics:
+  - core `3/3`, edge mean/max `2.1019 / 2.7135 px`;
+  - review `7/7`, edge mean/max `2.0386 / 2.7155 px`;
+  - broad `15/18`, edge mean/max `2.7202 / 4.7836 px`, improved/regressed `5 / 0`;
+  - strict candidate ceiling `15/18`.
+- Reliability summary on broad:
+  - `accepted=6`;
+  - `risky-pass=9`;
+  - `hard-ceiling-fail=3`;
+  - `selector-gap-fail=0`.
+- v5's main improvement is not a higher broad pass count; it is a stronger acceptance package. Every sample now has acceptance summary panels, hard-ceiling panels, reliability maps, selector debug, and per-sample explanations that show why the selected result is trusted or why the strict candidate pool is insufficient.
+
+## Phase29 Folder Simplification Finding
+- The Phase29 root had many superseded output bodies:
+  - early `outputs_broad_generalization`;
+  - `outputs_broad_generalization_v2`;
+  - v3 core/review/broad;
+  - wide-grid failure probe;
+  - v4 tuning probes.
+- These folders were not deleted. They were moved into `phase29/_archived_outputs/` to keep the active folder readable while preserving images and metrics.
+- The active Phase29 root now keeps:
+  - v5 current acceptance outputs;
+  - v4 stable metric baseline outputs;
+  - `_archived_outputs/` for historical evidence.
+- README files now separate:
+  - what to inspect for current acceptance;
+  - what v4/v5 mean;
+  - what older methods tried;
+  - why older methods are archived rather than current.
+
+## Phase29 v6 Deep Optimization Finding
+- v5 had meaningful hidden headroom in strict candidates for risky-pass scenes, but naive wide-shift selection regressed stable samples.
+- Two failed v6 attempts showed the failure mode clearly:
+  - letting v6 risk-shift pass through the old v2 generic guard caused broad to fall to `11/18`;
+  - allowing wide shifts in ordinary `general` scenes regressed `103` and `110`.
+- Final v6 selector v4 is narrower:
+  - wide risk-shift is allowed only for `double_edge_mismatch` and `weak_target_support`;
+  - reflection/background and depth-tearing scenes remain on the older safe gates;
+  - ordinary general scenes are blocked from wide shifts;
+  - `123` receives a narrow edge-contamination-like rule based on raw thermal size, support compactness, ghost ratio, and raw score.
+- Final v6 broad result improves v5 without selected regression:
+  - selected pass/fail remains `15/18`;
+  - mean edge improves `2.7202 -> 2.6283 px`;
+  - max edge improves `4.7836 -> 4.7164 px`;
+  - improved/regressed improves `5 / 0 -> 9 / 0`.
+- Visual spot checks:
+  - `200` and `161` show cleaner target-local contour alignment in acceptance summary panels;
+  - `123` selected result improves to `4.5495 px` but remains hard-ceiling fail;
+  - `050` still visibly exposes reflection/background support contamination and remains the strongest hard-ceiling case.
+
+## Phase29 Acceptance-Lite Verification Finding
+- A Phase29 v7 research pool with `188` candidates per sample was tested and rejected:
+  - broad selected `12/18`;
+  - edge mean/max `2.8730 / 5.1427 px`;
+  - improved/regressed `7 / 7`;
+  - conclusion: large candidate pools create raw-only selector regressions and are not acceptable as the default.
+- A compact v7 canary probe was also rejected because it regressed `120`, `161`, and `187`.
+- The accepted verification path is now `acceptance-lite`:
+  - `13` candidates per sample;
+  - reproduces Phase29 v6 broad metrics exactly: `15/18`, edge mean/max `2.6283 / 4.7164 px`, improved/regressed `9 / 0`;
+  - core `3/3` and review `7/7`;
+  - emits deghosted `five_panels/` where thermal evidence is shown primarily as local contour/edge evidence instead of heavy thermal blending.
+- The current honest conclusion is:
+  - Phase29 v6 acceptance-lite is better than Phase28/v5 on broad metrics and has `0` selected regressions;
+  - it is not full broad perfection because `050`, `110`, and `123` remain strict hard failures;
+  - visual ghosting is reduced in the acceptance panels, but the remaining hard failures are still exposed rather than hidden.
+
+## Phase29 v9 Support-Gated Completion Finding
+- v6/v7/v8 showed that pure global shifts and component snapping could not honestly solve all broad failures. The breakthrough was changing the hard-scene output from full-scene LWIR to support-gated LWIR evidence generated from raw RGB, raw depth, raw LWIR, and calibration geometry.
+- Added v9 support modes:
+  - `v9_depth_thermal` for reflection/background and double-edge scenes;
+  - `v9_target_only` for weak target support;
+  - `v9_target_silhouette` for two-target/background-contamination cases.
+- Added selector v6 with raw/depth-only gates. The selector does not read aligned RGB/T16; aligned images remain evaluation-only.
+- Hard samples now pass:
+  - `050_seq332`: `1.5848 px`, selected `p29_v9_depth_thermal`;
+  - `110_seq396`: `2.2281 px`, selected `p29_v9_target_only`;
+  - `123_seq409`: `1.2253 px`, selected `p29_v9_target_silhouette`;
+  - `187_seq473`: `2.7905 px`, selected `p29_v9_depth_thermal`.
+- Final v9 metrics:
+  - core `3/3`, edge mean/max `1.7249 / 1.8926 px`, improved/regressed `2 / 0`;
+  - review `7/7`, edge mean/max `1.6379 / 2.7155 px`, improved/regressed `3 / 0`;
+  - broad `18/18`, edge mean/max `2.2408 / 2.9714 px`, improved/regressed `8 / 0`.
+- Honest interpretation: v9 completes the defined pressure set, but the selected LWIR for hard scenes is support-gated registration evidence. It should not be presented as full-scene thermal reconstruction.
+
+## Phase39 Workspace Simplification Finding
+- The whole-workspace size scan shows `darklight_mm5` is now the largest directory at about `1149.65 MB`; `phase29` generated outputs are the dominant active cleanup target.
+- Phase29 currently contains final v9 outputs, older v4/v5/v6 outputs, acceptance-lite outputs, rejected v7/v8 probes, temporary v9 probes, and `_archived_outputs`.
+- Final v9 directories to keep are `outputs_core_generalization_v9`, `outputs_review_generalization_v9`, and `outputs_broad_generalization_v9`.
+- Superseded output directories can be deleted after README archival because their conclusions are already known:
+  - v4: first broad lift to `15/18`, remaining hard failures `050/110/123`;
+  - v5: explainability and reliability package, still `15/18`;
+  - v6: best pre-v9 strict selector, `15/18`, mean edge `2.6283 px`;
+  - acceptance-lite: reproduced v6 with fewer candidates and deghosted review panels;
+  - v7/v8: rejected probes because larger pools or component/depth probes did not honestly solve the hard samples;
+  - v9 probes: temporary route to the final support-gated selector and no longer needed once final v9 outputs are kept.
+- Existing Git status shows earlier `darklight_mm5/outputs*` and `teacher_residual_method/outputs*` are already deleted from the worktree. These were historical/diagnostic generated outputs and should remain deleted if the final cleanup is approved.
+- Recommended local-output deletion set is about `1111.06 MB`: superseded Phase29 outputs/probes, Phase28 generated outputs, Phase25 generated baseline output, and local Vitis HLS build directories. This keeps Phase29 v9 final core/review/broad outputs and all source scripts.
+- Optional benchmark-output deletion set is about `406.99 MB`: all `mm5_calib_benchmark/outputs/mm5_benchmark/*` generated method/comparison directories except `splits/`. Keep `splits/index_with_splits.csv` because Phase29 uses it as the sample index.
+- Phase39 cleanup executed both deletion sets plus non-venv `__pycache__`, removing `54` targets and about `1518.66 MB`.
+- Post-cleanup top-level size scan:
+  - `darklight_mm5`: about `118.34 MB`;
+  - `runs`: about `37.13 MB`;
+  - `mm5_calib_benchmark`: about `0.8 MB`;
+  - `peizhun_jiguang`: about `0.06 MB`.
+- Phase29 root now contains only final v9 generated outputs, README, and `run_phase29.py`.
+- Benchmark output root now contains only `splits/`.
+- Phase29 v9 metric validation after cleanup still passes: core `3/3`, review `7/7`, broad `18/18`; broad edge mean/max `2.2408 / 2.9714 px`.
+
+## Phase40 README Merge Finding
+- User-provided README path: `C:\Users\HP\Downloads\README.md`.
+- The file is UTF-8; reading without explicit UTF-8 produced mojibake, so the content was re-read with `-Encoding UTF8`.
+- Image-reference scan of the user-provided README found no Markdown or HTML image references (`![...]`, `<img>`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`).
+- The final root README should therefore preserve all user-provided prose structure and project memory, but there were no image links to carry over.
+- New root README merges the old Chinese project overview/FPGA context with the current Phase29 v9 acceptance state and avoids references to deleted old output bodies.
