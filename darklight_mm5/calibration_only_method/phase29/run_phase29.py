@@ -13,8 +13,7 @@ import numpy as np
 PHASE29_DIR = Path(__file__).resolve().parent
 METHOD_DIR = PHASE29_DIR.parent
 DARKLIGHT_DIR = METHOD_DIR.parent
-PHASE28_DIR = METHOD_DIR / "phase28"
-for path in (DARKLIGHT_DIR, METHOD_DIR, PHASE28_DIR):
+for path in (DARKLIGHT_DIR, METHOD_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
@@ -23,7 +22,7 @@ from run_calibration_only import CandidateOutput, sample_id  # noqa: E402
 from run_darklight import auto_edges, collect_fieldnames, enhance_lowlight_bgr, imwrite_unicode, normalize_u8, write_csv  # noqa: E402
 from run_phase22_stereo_recalib import add_metadata_to_metrics, summarize  # noqa: E402
 from run_phase25_edge_optimization import make_shift_candidate, prepare_rows  # noqa: E402
-from run_phase28 import (  # noqa: E402
+from phase29_integrated_helpers import (  # noqa: E402
     PROFILE_IDS,
     add_target_metrics,
     alpha_mask_view,
@@ -1214,7 +1213,7 @@ def contour_edges(
     depth_valid: np.ndarray,
 ) -> dict:
     from run_darklight import auto_edges, enhance_lowlight_bgr
-    from run_phase28 import depth_discontinuity_edges
+    from phase29_integrated_helpers import depth_discontinuity_edges
 
     enhanced = enhance_lowlight_bgr(rgb_bgr)
     rgb_gray = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)

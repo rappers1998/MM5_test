@@ -6,6 +6,8 @@ Phase29 is the current strict calibration/raw/depth registration branch. Generat
 
 Phase29 v9 is the current accepted broad-generalization package.
 
+The helper functions formerly imported from `phase28/run_phase28.py` are now integrated locally in `phase29_integrated_helpers.py`, so this folder is self-contained for the v9 acceptance path.
+
 | Profile | Output | Result |
 |---|---|---:|
 | core | `outputs_core_generalization_v9/` | `3/3` pass, edge mean/max `1.7249 / 1.8926 px`, improved/regressed `2 / 0` |

@@ -728,3 +728,18 @@
   - new `README.md` image-reference scan returned none;
   - deleted-output path scan on root README returned none;
   - `git diff --check -- README.md` passed with only LF/CRLF warnings.
+- User asked to integrate the Phase28 files required by Phase29 directly into Phase29, then remove unnecessary Phase28.
+- Inspected `phase29/run_phase29.py` and confirmed the only active code dependency was `phase28/run_phase28.py`.
+- Copied `darklight_mm5/calibration_only_method/phase28/run_phase28.py` to `darklight_mm5/calibration_only_method/phase29/phase29_integrated_helpers.py`.
+- Updated `run_phase29.py`:
+  - removed `PHASE28_DIR` sys.path injection;
+  - changed imports from `run_phase28` to `phase29_integrated_helpers`;
+  - changed the local `depth_discontinuity_edges` import to `phase29_integrated_helpers`.
+- Adjusted the integrated helper module path constants from `PHASE28_DIR` to `PHASE29_DIR`.
+- Updated README files to document that Phase29 is self-contained and the old Phase28 helper code is integrated locally.
+- Deleted `darklight_mm5/calibration_only_method/phase28/` and removed the generated `phase29/__pycache__`.
+- Verification:
+  - `Test-Path .\darklight_mm5\calibration_only_method\phase28` returned `False`;
+  - `python -B .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --help` passed after deletion;
+  - v9 metrics still read as core `3/3`, review `7/7`, broad `18/18`, broad edge mean/max `2.2408 / 2.9714 px`;
+  - non-venv `__pycache__` scan returned no results.

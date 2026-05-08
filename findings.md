@@ -930,3 +930,10 @@
 - Image-reference scan of the user-provided README found no Markdown or HTML image references (`![...]`, `<img>`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`).
 - The final root README should therefore preserve all user-provided prose structure and project memory, but there were no image links to carry over.
 - New root README merges the old Chinese project overview/FPGA context with the current Phase29 v9 acceptance state and avoids references to deleted old output bodies.
+
+## Phase41 Phase28 Integration Finding
+- `phase29/run_phase29.py` only needed helper functions from `phase28/run_phase28.py`; it did not require Phase28 generated outputs.
+- The helper source was integrated into `phase29/phase29_integrated_helpers.py`.
+- `run_phase29.py` now imports `PROFILE_IDS`, `make_phase28_candidate`, visual/fusion helpers, metric helpers, and `depth_discontinuity_edges` from `phase29_integrated_helpers`.
+- The standalone `phase28/` directory was removed after `run_phase29.py --help` and v9 JSON metric checks passed.
+- Phase29 is now self-contained for the v9 acceptance path while still preserving historical Phase28 baseline metric names inside metrics/reports.

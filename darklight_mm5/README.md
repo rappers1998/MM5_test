@@ -7,7 +7,7 @@ This workspace contains MM5 RGB/LWIR/depth registration, fusion, and evaluation 
 | Route | Entry | Purpose |
 |---|---|---|
 | Phase29 v9 support-gated | `calibration_only_method/phase29/` | Current strict raw/calibration/depth broad-generalization acceptance package. |
-| Phase28 | `calibration_only_method/phase28/` | Historical stable visual baseline and helper code for Phase29. |
+| Phase29 integrated helpers | `calibration_only_method/phase29/phase29_integrated_helpers.py` | Integrated helper code formerly kept under Phase28. |
 | Phase25 helpers | `calibration_only_method/run_phase25_depth_assisted.py` and `run_phase25_edge_optimization.py` | Geometry/depth helper provenance reused by later phases. |
 
 Phase29 generation and selection use calibration files, raw RGB, raw LWIR, raw depth, calibration-board geometry, and raw/depth support masks only. MM5 aligned RGB/T16 are evaluation-only.

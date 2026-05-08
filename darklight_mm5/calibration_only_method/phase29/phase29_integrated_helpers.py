@@ -9,8 +9,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-PHASE28_DIR = Path(__file__).resolve().parent
-METHOD_DIR = PHASE28_DIR.parent
+PHASE29_DIR = Path(__file__).resolve().parent
+METHOD_DIR = PHASE29_DIR.parent
 DARKLIGHT_DIR = METHOD_DIR.parent
 for path in (DARKLIGHT_DIR, METHOD_DIR):
     if str(path) not in sys.path:
@@ -1165,7 +1165,7 @@ def main() -> None:
     parser.add_argument("--save-before-after", dest="save_before_after", action="store_true", default=True)
     parser.add_argument("--no-save-before-after", dest="save_before_after", action="store_false")
     parser.add_argument("--run-profile", choices=["core", "review", "broad", "all"], default="core")
-    parser.add_argument("--output", default=str(PHASE28_DIR / "outputs_visual_acceptance"))
+    parser.add_argument("--output", default=str(PHASE29_DIR / "outputs_integrated_helper_acceptance"))
     args = parser.parse_args()
 
     output_dir = Path(args.output)

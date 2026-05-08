@@ -57,6 +57,7 @@ Run a clean dark-light MM5 RGB1 + LWIR calibration and fusion review after remov
 | 38 | complete | Implement Phase29 v9 support-gated strict selector and complete the defined broad pressure set |
 | 39 | complete | Review and simplify the whole workspace around Phase29 v9, record superseded-version memory in README, then delete redundant generated outputs after approval |
 | 40 | complete | Merge the user-provided Chinese README with the cleaned current README while preserving any image references |
+| 41 | complete | Integrate Phase28 helper code into Phase29 and delete the standalone Phase28 directory |
 
 ## Selected Samples
 | aligned_id | sequence | split | raw RGB1 mean |
@@ -984,3 +985,25 @@ Merge the user-provided `C:\Users\HP\Downloads\README.md` with the current clean
 - `Select-String` image-reference scan on the new `README.md` returned no image references.
 - `rg` scan found no root README references to deleted old output folders such as `outputs_phase25_depth_assisted`, v4/v5/v6/v7/v8/probe Phase29 outputs, or `_archived_outputs`.
 - `git diff --check -- README.md` passed, with only normal Windows LF/CRLF warnings.
+
+## Phase41 Phase28 Helper Integration Result
+
+### Goal
+Remove the standalone `darklight_mm5/calibration_only_method/phase28/` directory while keeping Phase29 v9 runnable and reproducible.
+
+### Result
+- Copied `phase28/run_phase28.py` into `phase29/phase29_integrated_helpers.py`.
+- Updated `phase29/run_phase29.py` to import helper functions from `phase29_integrated_helpers` instead of `run_phase28`.
+- Removed `PHASE28_DIR` path injection from `run_phase29.py`.
+- Updated `phase29_integrated_helpers.py` top-level path constants so it is local to Phase29.
+- Deleted the standalone `phase28/` directory.
+- Updated README references so Phase29 is documented as self-contained for v9 acceptance.
+
+### Verification
+- `python -B .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --help` passed after deleting `phase28/`.
+- Existing v9 metrics remain valid:
+  - core `3/3`, edge mean/max `1.7249 / 1.8926 px`
+  - review `7/7`, edge mean/max `1.6379 / 2.7155 px`
+  - broad `18/18`, edge mean/max `2.2408 / 2.9714 px`
+- `Test-Path .\darklight_mm5\calibration_only_method\phase28` returns `False`.
+- Non-venv `__pycache__` scan returned no results after cleanup.

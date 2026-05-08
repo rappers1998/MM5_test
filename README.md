@@ -187,7 +187,6 @@ MM5_test/
 |- calibration/
 |- darklight_mm5/
 |  |- calibration_only_method/
-|  |  |- phase28/
 |  |  `- phase29/
 |  |- docs/
 |  `- teacher_residual_method/
@@ -217,7 +216,7 @@ MM5_test/
 
 ### `darklight_mm5/`
 
-MM5 RGB/LWIR/depth 配准与融合主工作区。当前核心是 `calibration_only_method/phase29/`，Phase28/Phase25 相关脚本作为 helper 和历史基线保留。
+MM5 RGB/LWIR/depth 配准与融合主工作区。当前核心是 `calibration_only_method/phase29/`。Phase29 需要的旧 Phase28 helper 已整合到 `phase29/phase29_integrated_helpers.py`，不再保留独立 `phase28/` 目录。
 
 ### `mm5_calib_benchmark/`
 

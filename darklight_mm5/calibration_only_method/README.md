@@ -1,6 +1,6 @@
 # Calibration-Only MM5 Registration
 
-This directory contains the strict calibration-only MM5 registration path. The current accepted package is Phase29 v9 with the `support-v9` strict support-gated grid. Phase28, Phase25, and earlier Phase29 versions remain as source/provenance history, while their generated output bodies are no longer part of the active acceptance workspace.
+This directory contains the strict calibration-only MM5 registration path. The current accepted package is Phase29 v9 with the `support-v9` strict support-gated grid. The helper code formerly kept in Phase28 is now integrated into `phase29/phase29_integrated_helpers.py`; Phase25 and earlier Phase29 versions remain as source/provenance history while their generated output bodies are no longer part of the active acceptance workspace.
 
 ## Current Path
 
@@ -18,7 +18,6 @@ Recommended evidence:
 - `phase29/outputs_broad_generalization_v9/reliability_maps/`
 - `phase29/outputs_broad_generalization_v9/selector_debug/`
 - `phase29/README.md` for superseded method history
-- `phase28/README.md`
 
 ## Data Boundary
 
@@ -63,8 +62,8 @@ python .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --run-prof
 | Path | Status |
 |---|---|
 | `phase29/` | Current strict broad-generalization and support-gated acceptance version. |
-| `phase28/` | Historical visual baseline and helper code imported by Phase29. |
-| `run_phase25_edge_optimization.py` | Helper reused by Phase28/29. |
+| `phase29/phase29_integrated_helpers.py` | Integrated helper code formerly imported from Phase28. |
+| `run_phase25_edge_optimization.py` | Geometry/depth helper reused by the integrated Phase29 path. |
 | `run_phase25_depth_assisted.py` | Phase25 geometry provenance helper. |
 | `run_phase21_canvas_optimization.py` to `run_phase24_lwir_board_affine.py` | Calibration and board-affine helpers. |
 | `run_calibration_only.py`, `diagnose_aligned_canvas.py` | Historical diagnostic entrypoints. |
