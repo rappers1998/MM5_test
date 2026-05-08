@@ -937,3 +937,12 @@
 - `run_phase29.py` now imports `PROFILE_IDS`, `make_phase28_candidate`, visual/fusion helpers, metric helpers, and `depth_discontinuity_edges` from `phase29_integrated_helpers`.
 - The standalone `phase28/` directory was removed after `run_phase29.py --help` and v9 JSON metric checks passed.
 - Phase29 is now self-contained for the v9 acceptance path while still preserving historical Phase28 baseline metric names inside metrics/reports.
+
+## Phase42 Folder Review Finding
+- Current active route remains `darklight_mm5/calibration_only_method/phase29/`; Phase29 v9 is the only current acceptance package.
+- Root README was already UTF-8, but PowerShell without `-Encoding UTF8` displayed mojibake. The rewritten README now includes an explicit UTF-8 read note.
+- The local workspace folder is `MAR_bianyuan`, while Git remote remains `rappers1998/MM5_test.git`; README now distinguishes local path name from project logical name.
+- No real directory renaming is recommended for this pass because `outputs_core_generalization_v9`, `outputs_review_generalization_v9`, and `outputs_broad_generalization_v9` are referenced by reports, commands, and script arguments.
+- Stale Phase28-as-current references were found in hardware, legacy IVF, MAR comparison, and teacher-residual README files. They now point to Phase29 v9 or describe Phase28 only as a historical baseline.
+- `before_after_phase28_phase29/` remains inside final v9 outputs as historical comparison evidence, not as an active Phase28 dependency.
+- The project now has a dedicated structure review note at `docs/project_structure_review_2026-05-08.md`.

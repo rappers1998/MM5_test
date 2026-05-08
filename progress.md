@@ -743,3 +743,15 @@
   - `python -B .\darklight_mm5\calibration_only_method\phase29\run_phase29.py --help` passed after deletion;
   - v9 metrics still read as core `3/3`, review `7/7`, broad `18/18`, broad edge mean/max `2.2408 / 2.9714 px`;
   - non-venv `__pycache__` scan returned no results.
+- Started Phase42 folder and README review after the user requested a detailed folder review, folder-name organization, and richer README rewrite.
+- Restored planning files and ran the available planning session catchup script.
+- Checked Git status, recent commits, top-level folders, README files, directory sizes, file-type counts, active Phase29 v9 outputs, and stale Phase28 references.
+- Chose a conservative naming policy: do not rename real directories in this pass because current Phase29 v9 output names are bound to scripts, reports, and reproduction commands.
+- Rewrote root `README.md` with richer current-state, naming, output, reproduction, FPGA/HLS, environment, cleanup, and UTF-8 guidance.
+- Added `docs/project_structure_review_2026-05-08.md`.
+- Updated stale Phase28 current-route references in `peizhun_jiguang`, `peizhun_jiguang/hls`, `mm5_ivf`, `mar_scholar_compare`, and `teacher_residual_method` README files.
+- Verification passed:
+  - active README scan found no remaining `calibration_only_method/phase28` current-route references;
+  - v9 core/review/broad `p29_best.json` files passed `python -m json.tool`;
+  - `git diff --check` on edited tracked Markdown files passed with only LF/CRLF warnings;
+  - trailing-whitespace scan on edited Markdown and planning files returned no matches.

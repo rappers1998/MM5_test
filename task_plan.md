@@ -58,6 +58,7 @@ Run a clean dark-light MM5 RGB1 + LWIR calibration and fusion review after remov
 | 39 | complete | Review and simplify the whole workspace around Phase29 v9, record superseded-version memory in README, then delete redundant generated outputs after approval |
 | 40 | complete | Merge the user-provided Chinese README with the cleaned current README while preserving any image references |
 | 41 | complete | Integrate Phase28 helper code into Phase29 and delete the standalone Phase28 directory |
+| 42 | complete | Review current folder structure, document naming policy, enrich root README, and fix stale Phase28 README references |
 
 ## Selected Samples
 | aligned_id | sequence | split | raw RGB1 mean |
@@ -66,21 +67,16 @@ Run a clean dark-light MM5 RGB1 + LWIR calibration and fusion review after remov
 | 104 | 386 | val | 1.90 |
 | 103 | 385 | test | 1.93 |
 
-## Outputs To Review
-- `darklight_mm5/outputs/quads/*_quad.png`
-- `darklight_mm5/outputs/five_panels/*_five_panel.png`
-- `darklight_mm5/outputs_calibration_plane/five_panels/*_five_panel.png`
-- `darklight_mm5/outputs_calibration_plane/evaluation_panels/*_evaluation_panel.png`
-- `darklight_mm5/outputs/edge_reviews/*_official_check.png`
-- `darklight_mm5/outputs/edge_reviews/*_lwir_calibration_check.png`
-- `darklight_mm5/outputs/metrics/dl_ref_met_sample.csv`
-- `darklight_mm5/outputs/metrics/dl_ref_met_reg_stage.csv`
-- `darklight_mm5/outputs/metrics/dl_ref_met_fusion.csv`
-- `darklight_mm5/outputs_calibration_plane/metrics/dl_plane_met_sample.csv`
-- `darklight_mm5/outputs_calibration_plane/dl_plane_eval_sum.json`
-- `darklight_mm5/outputs_calibration_plane/dl_plane_eval_ref.csv`
-- `darklight_mm5/README.md`
-- `darklight_mm5/outputs/reports/dl_ref_mm5_darklight_cal_fusion_acc_report.docx`
+## Current Outputs To Review
+- `darklight_mm5/calibration_only_method/phase29/outputs_core_generalization_v9`
+- `darklight_mm5/calibration_only_method/phase29/outputs_review_generalization_v9`
+- `darklight_mm5/calibration_only_method/phase29/outputs_broad_generalization_v9`
+- `darklight_mm5/calibration_only_method/phase29/outputs_broad_generalization_v9/reports/p29_broad_generalization_report.md`
+- `darklight_mm5/calibration_only_method/phase29/outputs_broad_generalization_v9/five_panels/`
+- `darklight_mm5/calibration_only_method/phase29/outputs_broad_generalization_v9/acceptance_summary_panels/`
+- `darklight_mm5/calibration_only_method/phase29/outputs_broad_generalization_v9/reliability_maps/`
+- `darklight_mm5/calibration_only_method/phase29/README.md`
+- `README.md`
 
 ## Cleanup Summary
 - Removed root old `outputs` method results and temporary images.
@@ -1007,3 +1003,39 @@ Remove the standalone `darklight_mm5/calibration_only_method/phase28/` directory
   - broad `18/18`, edge mean/max `2.2408 / 2.9714 px`
 - `Test-Path .\darklight_mm5\calibration_only_method\phase28` returns `False`.
 - Non-venv `__pycache__` scan returned no results after cleanup.
+
+## Phase42 Folder Review and README Enrichment Result
+
+### Goal
+Review the current project folder structure after Phase28 integration, keep reproducible directory names stable, and rewrite the root README with richer guidance rather than trimming existing project memory.
+
+### Result
+- Confirmed the active mainline is still `darklight_mm5/calibration_only_method/phase29/`.
+- Confirmed Git status was clean before this documentation pass.
+- Re-read README files using UTF-8 to avoid PowerShell mojibake.
+- Added `docs/project_structure_review_2026-05-08.md` with folder inventory, naming decisions, stale-reference findings, and maintenance boundaries.
+- Rewrote root `README.md` as a fuller project entry:
+  - current Phase29 v9 status and metrics;
+  - quick entrance table;
+  - method boundary;
+  - actual folder map and naming policy;
+  - v9 output evidence map;
+  - reproduction and validation commands;
+  - version memory;
+  - FPGA/HLS flow;
+  - environment, cleanup, and UTF-8 notes.
+- Fixed stale Phase28-as-current references in:
+  - `peizhun_jiguang/README.md`;
+  - `peizhun_jiguang/hls/README.md`;
+  - `mm5_ivf/README.md`;
+  - `mar_scholar_compare/README.md`;
+  - `darklight_mm5/teacher_residual_method/README.md`.
+
+### Naming Decision
+No real directories were renamed in this pass. The Phase29 output names are tied to reports, reproducibility commands, and script arguments, so the safer engineering choice is to document the naming policy instead of changing paths casually.
+
+### Verification
+- Active README scan found no remaining `calibration_only_method/phase28` current-route references. Phase28 remains only as historical baseline text or old planning history.
+- `python -m json.tool` passed for v9 core/review/broad `p29_best.json`.
+- `git diff --check` on edited tracked Markdown files passed with only normal Windows LF/CRLF warnings.
+- Edited Markdown and planning files had no trailing whitespace matches.

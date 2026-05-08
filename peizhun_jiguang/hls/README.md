@@ -1,6 +1,6 @@
 # HLS Registration/Fusion Skeleton
 
-This directory contains the Vitis HLS implementation for the Phase25-to-laser FPGA path. It is the hardware-oriented branch, while the current offline visual acceptance branch is Phase28 under `darklight_mm5/calibration_only_method/phase28/`.
+This directory contains the Vitis HLS implementation for the Phase25-to-laser FPGA path. It is the hardware-oriented branch, while the current offline acceptance branch is Phase29 v9 under `darklight_mm5/calibration_only_method/phase29/`.
 
 ## Files
 

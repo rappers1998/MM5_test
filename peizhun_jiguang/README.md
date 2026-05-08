@@ -1,11 +1,11 @@
 # Phase25 Laser-Range FPGA Registration
 
-This package is the FPGA/HLS translation path for the earlier Phase25 geometry seed. It is separate from the current Phase28 visual acceptance package.
+This package is the FPGA/HLS translation path for the earlier Phase25 geometry seed. It is separate from the current Phase29 v9 support-gated offline acceptance package.
 
 Current offline acceptance path:
 
 ```text
-darklight_mm5/calibration_only_method/phase28/
+darklight_mm5/calibration_only_method/phase29/
 ```
 
 Hardware path in this folder:
@@ -22,7 +22,7 @@ single range value -> range-bin LUT -> fixed-point LWIR warp -> RGB/LWIR fusion
 | Phase25 promoted | `0.9865 / 0.9724` | `0.9321 / 0.9261` | dense-depth boundary selected residual shift |
 | retained bridge target | - | `0.9233 / 0.9064` | previous MM5 aligned bridge level |
 
-Phase28 adds visual acceptance, anti-ghost support, contour overlays, and tear/ghost risk maps on top of the calibration-only line. The HLS path still uses the simpler Phase25 seed because it is easier to convert into a deterministic fixed-point IP.
+Phase29 v9 adds support-gated broad generalization, anti-ghost evidence views, contour overlays, reliability maps, and raw/depth-only selector gates on top of the calibration-only line. The HLS path still uses the simpler Phase25 seed because it is easier to convert into a deterministic fixed-point IP.
 
 ## Target
 

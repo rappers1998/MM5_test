@@ -18,6 +18,7 @@ Phase29 v9 support-gated is the current strict calibration/raw/depth acceptance 
 | `../darklight_mm5/README.md` | MM5 workspace overview. |
 | `../darklight_mm5/calibration_only_method/README.md` | Strict calibration-only boundary, results, and commands. |
 | `../darklight_mm5/calibration_only_method/phase29/README.md` | Phase29 v9 support-gated method, outputs, reliability labels, and superseded-version memory. |
+| `project_structure_review_2026-05-08.md` | Current folder review, naming decisions, and README cleanup notes. |
 | `../task_plan.md` | Phase history and decisions. |
 | `../findings.md` | Technical findings and failure analysis. |
 | `../progress.md` | Run log and verification notes. |

@@ -7,7 +7,7 @@ The teacher-residual route used MM5 aligned outputs as an offline teacher to stu
 ## Status
 
 - Current research mainline: `darklight_mm5/calibration_only_method/phase29/`
-- Stable visual acceptance baseline: `darklight_mm5/calibration_only_method/phase28/`
+- Current accepted support-gated package: `darklight_mm5/calibration_only_method/phase29/`
 - This folder: diagnostic only
 - Generated teacher-residual outputs, reports, flow `.npy`, and sample-flow `.npz` files have been removed from the active workspace.
 
@@ -23,4 +23,4 @@ The source script is retained for audit purposes:
 python .\darklight_mm5\teacher_residual_method\run_teacher_residual.py --aligned-ids 106,104,103
 ```
 
-Any regenerated outputs should be treated as temporary diagnostics and should not be mixed with Phase28 acceptance outputs or Phase29 broad-generalization reports.
+Any regenerated outputs should be treated as temporary diagnostics and should not be mixed with Phase29 v9 acceptance outputs or broad-generalization reports.

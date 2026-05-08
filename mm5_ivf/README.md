@@ -5,7 +5,7 @@ This directory is a legacy MM5 RGB/LWIR registration and fusion exploration work
 It is not the current acceptance route. The current acceptance route is:
 
 ```text
-darklight_mm5/calibration_only_method/phase28/
+darklight_mm5/calibration_only_method/phase29/
 ```
 
 ## Status
